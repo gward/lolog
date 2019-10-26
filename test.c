@@ -1,10 +1,29 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define __USE_POSIX
+#include <time.h>
+#include <sys/time.h>
 
 #include <lolog.h>
 
 static char *
 timefunc() {
-    return "about 6 o'clock";
+    // XXX EVIL: this leaks memory on every log message ... but free()
+    // is not the answer, since we should write into a buffer rather
+    // than dynamically allocate bits of the log message
+    char *buf = calloc(sizeof(char), 40);
+    struct timeval now_tv;
+    if (gettimeofday(&now_tv, NULL) < 0) {
+        return NULL;
+    }
+
+    const int tslen = 19;       /* yyyy-mm-ddThh:mm:ss */
+    struct tm now_tm;
+    localtime_r(&now_tv.tv_sec, &now_tm);
+    strftime(buf, 40, "%FT%T", &now_tm);
+    sprintf(buf + tslen, ".%06ld", now_tv.tv_usec);
+    return buf;
 }
 
 int main(int argc, char* argv[]) {
