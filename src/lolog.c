@@ -3,10 +3,13 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lolog.h"
 
 /* private internals -- lol_config_t */
+
+static lol_config_t *default_config = NULL;
 
 static void
 _config_set_level(lol_config_t *self, char *name, lol_level_t level) {
@@ -17,8 +20,37 @@ _config_set_level(lol_config_t *self, char *name, lol_level_t level) {
     self->level_configs = level_config;
 }
 
+static lol_config_t *
+_get_config() {
+    if (!default_config) {
+        fprintf(stderr,
+                "lolog: cannot configure logger: "
+                "no default configuration set\n");
+        abort();
+    }
+    return default_config;
+}
+
 
 /* private internals -- lol_logger_t */
+
+static void
+_configure_logger(lol_logger_t *self) {
+    printf("lolog: configuring logger %s\n", self->name);
+    lol_config_t *config = _get_config();
+    lol_level_config_t *level_config;
+    for (level_config = config->level_configs;
+         level_config != NULL;
+         level_config = level_config->next) {
+        if (strcmp(level_config->name, self->name) == 0) {
+            printf("lolog: found config for %s: level=%d\n",
+                   self->name, level_config->level);
+            self->level = level_config->level;
+            break;
+        }
+    }
+}
+
 
 /**
  * Emit a log message with no attempt at formatting or escaping or anything.
@@ -27,6 +59,10 @@ _config_set_level(lol_config_t *self, char *name, lol_level_t level) {
  */
 static void
 _simple_log(lol_logger_t *self, lol_level_t level, va_list argp) {
+    if (self->level == LOL_NOTSET) {
+        _configure_logger(self);
+    }
+
     if (level < self->level) {
         return;
     }
@@ -74,6 +110,7 @@ lol_make_config(lol_level_t default_level, FILE *fh) {
     config->fh = fh;
     config->level_configs = NULL;
     config->set_level = _config_set_level;
+    default_config = config;
     return config;
 }
 

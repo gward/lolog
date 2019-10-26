@@ -3,14 +3,13 @@
 #include <lolog.h>
 
 int main(int argc, char* argv[]) {
-    lol_config_t *config = lol_make_config(LOL_INFO, stdout);
-    config->set_level(config, "myapp", LOL_DEBUG);
+    lol_config_t *config = lol_make_config(LOL_DEBUG, stdout);
+    config->set_level(config, "myapp", LOL_INFO);
     config->set_level(config, "lib", LOL_SILENT);
 
     lol_logger_t *logger = lol_make_logger("myapp");
     lol_logger_t *liblog = lol_make_logger("lib");
 
-    logger->level = LOL_INFO;
     logger->info(logger,
                  "key1", "value blah blah o'ding \"dong\"",
                  "key2", "value2",
