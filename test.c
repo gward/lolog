@@ -47,6 +47,7 @@ int main(int argc, char* argv[]) {
     applog->debug(applog,
                   "arg", "suppressed by level",
                   NULL);
+    applog->info(applog, NULL);       /* pointless message */
     liblog->critical(liblog, "crap", "this logger really cries wolf a lot");
     lol_free_logger(applog);
     lol_free_logger(liblog);

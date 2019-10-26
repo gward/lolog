@@ -49,6 +49,12 @@ _configure_logger(lol_logger_t *self) {
 }
 
 
+// includes terminating nul character
+#define MAX_OUTPUT 4096
+
+// XXX this should be thread local!
+static char output_buf[MAX_OUTPUT];
+
 /**
  * Emit a log message with no attempt at formatting or escaping or anything.
  * It's not machine-readable! This is only suitable for debugging and
@@ -65,29 +71,45 @@ _simple_log(lol_logger_t *self, lol_level_t level, va_list argp) {
     }
 
     char *key, *value;
-    char before[] = "\x0\x0";
+    char *buf = output_buf;
+    int offset = 0;
+    size_t remaining = MAX_OUTPUT;
+    int nbytes;
+    remaining--;                /* leave room for newline */
 
     // print context key/value pairs first (if any)
     lol_context_t *context;
     for (context = self->context; context; context = context->next) {
         key = context->key;
         value = context->valuefunc ? context->valuefunc() : context->value;
-        fprintf(self->fh, "%s%s=%s", before, key, value);
-        before[0] = ' ';
+        nbytes = snprintf(buf + offset,
+                          remaining,
+                          "%s=%s ",
+                          key, value);
+        offset += nbytes;
+        remaining -= nbytes;
     }
 
     // then print the key/value pairs for this message
     while (true) {
         key = va_arg(argp, char *);
         if (!key) {
-            fputc('\n', self->fh);
-            fflush(self->fh);
-            return;
+            offset--;           /* overwrite last trailing space */
+            buf[offset++] = '\n';
+            buf[offset++] = 0;
+            break;
         }
         value = va_arg(argp, char *);
-        fprintf(self->fh, "%s%s=%s", before, key, value);
-        before[0] = ' ';
+        nbytes = snprintf(buf + offset,
+                          remaining,
+                          "%s=%s ",
+                          key, value);
+        offset += nbytes;
+        remaining -= nbytes;
     }
+
+    fputs(buf, self->fh);
+    fflush(self->fh);
 }
 
 #include "gen/simple-loggers.c"
