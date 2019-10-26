@@ -10,6 +10,13 @@ typedef enum {
     LOL_SILENT,                 /* no logs ever emitted at this level */
 } lol_level_t;
 
+typedef struct lol_context_t {
+    char *key;
+    char *value;
+    char *(*valuefunc)();
+    struct lol_context_t *next;
+} lol_context_t;
+
 typedef struct lol_logger_config_t {
     char *name;
     lol_level_t level;
@@ -28,12 +35,20 @@ typedef struct lol_logger_t {
     char *name;
     lol_level_t level;
     FILE *fh;
+    lol_context_t *context;
 
     void (*debug)(struct lol_logger_t *self, ...);
     void (*info)(struct lol_logger_t *self, ...);
     void (*warning)(struct lol_logger_t *self, ...);
     void (*error)(struct lol_logger_t *self, ...);
     void (*critical)(struct lol_logger_t *self, ...);
+
+    void (*add_context)(struct lol_logger_t *self,
+                        char *key,
+                        char *value);
+    void (*add_dynamic_context)(struct lol_logger_t *self,
+                                char *key,
+                                char *(*valuefunc)());
 
 } lol_logger_t;
 

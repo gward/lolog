@@ -67,6 +67,16 @@ _simple_log(lol_logger_t *self, lol_level_t level, va_list argp) {
     char *key, *value;
     char before[] = "\x0\x0";
 
+    // print context key/value pairs first (if any)
+    lol_context_t *context;
+    for (context = self->context; context; context = context->next) {
+        key = context->key;
+        value = context->valuefunc ? context->valuefunc() : context->value;
+        fprintf(self->fh, "%s%s=%s", before, key, value);
+        before[0] = ' ';
+    }
+
+    // then print the key/value pairs for this message
     while (true) {
         key = va_arg(argp, char *);
         if (!key) {
@@ -81,6 +91,44 @@ _simple_log(lol_logger_t *self, lol_level_t level, va_list argp) {
 }
 
 #include "gen/simple-loggers.c"
+
+/**
+ * Append new context record to the end of self->context list
+ * (order matters!)
+ */
+static void
+_append_context(lol_logger_t *self, lol_context_t *context) {
+    lol_context_t *tail;
+    for (tail = self->context; tail && tail->next; tail = tail->next) {
+    }
+    if (!tail) {
+        self->context = context;
+    } else {
+        tail->next = context;
+    }
+}
+
+static void
+_add_static_context(lol_logger_t *self, char *key, char *value) {
+    lol_context_t *context = malloc(sizeof(lol_context_t));
+    context->key = key;
+    context->value = value;
+    context->valuefunc = NULL;
+    context->next = NULL;
+
+    _append_context(self, context);
+}
+
+static void
+_add_dynamic_context(lol_logger_t *self, char *key, char *(*valuefunc)()) {
+    lol_context_t *context = malloc(sizeof(lol_context_t));
+    context->key = key;
+    context->value = NULL;
+    context->valuefunc = valuefunc;
+    context->next = NULL;
+
+    _append_context(self, context);
+}
 
 /* public interface */
 
@@ -106,11 +154,14 @@ lol_make_logger(char *name) {
     logger->name = name;
     logger->level = LOL_NOTSET;
     logger->fh = stdout;
+    logger->context = NULL;
     logger->debug = _simple_debug;
     logger->info = _simple_info;
     logger->warning = _simple_warning;
     logger->error = _simple_error;
     logger->critical = _simple_critical;
+    logger->add_context = _add_static_context;
+    logger->add_dynamic_context = _add_dynamic_context;
     return logger;
 }
 
