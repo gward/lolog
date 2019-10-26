@@ -14,7 +14,7 @@
  * human consumption.
  */
 static void
-_simple_log(lolog_t *self, level_t level, va_list argp) {
+_simple_log(lol_logger_t *self, lol_level_t level, va_list argp) {
     if (level < self->level) {
         return;
     }
@@ -36,30 +36,30 @@ _simple_log(lolog_t *self, level_t level, va_list argp) {
 }
 
 static void
-_simple_debug(lolog_t *self, ...) {
+_simple_debug(lol_logger_t *self, ...) {
     va_list argp;
 
     va_start(argp, self);
-    _simple_log(self, DEBUG, argp);
+    _simple_log(self, LOL_DEBUG, argp);
     va_end(argp);
 }
 
 static void
-_simple_info(lolog_t *self, ...) {
+_simple_info(lol_logger_t *self, ...) {
     va_list argp;
 
     va_start(argp, self);
-    _simple_log(self, INFO, argp);
+    _simple_log(self, LOL_INFO, argp);
     va_end(argp);
 }
 
 /* public interface */
 
-lolog_t *
-make_logger(char *name) {
-    lolog_t *logger = malloc(sizeof(lolog_t));
+lol_logger_t *
+lol_make_logger(char *name) {
+    lol_logger_t *logger = malloc(sizeof(lol_logger_t));
     logger->name = name;
-    logger->level = DEBUG;
+    logger->level = LOL_DEBUG;
     logger->fh = stdout;
     logger->debug = _simple_debug;
     logger->info = _simple_info;
@@ -67,6 +67,6 @@ make_logger(char *name) {
 }
 
 void
-free_logger(lolog_t *logger) {
+lol_free_logger(lol_logger_t *logger) {
     free(logger);
 }

@@ -5,10 +5,10 @@ usage:
     #include <lolog.h>
 
     void myfunc() {
-        lolog_t *logger = make_logger("myapp");
+        lol_logger_t *logger = lol_make_logger("myapp");
         logger->info(logger, key, val, ...);
 
-        free_logger(logger);
+        lol_free_logger(logger);
     }
 
 See `test.c` for a working example.

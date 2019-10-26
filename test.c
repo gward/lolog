@@ -1,8 +1,8 @@
 #include <lolog.h>
 
 int main(int argc, char* argv[]) {
-    lolog_t *logger = make_logger("myapp");
-    logger->level = INFO;
+    lol_logger_t *logger = lol_make_logger("myapp");
+    logger->level = LOL_INFO;
     logger->info(logger,
                  "key1", "value blah blah o'ding \"dong\"",
                  "key2", "value2",
@@ -11,5 +11,5 @@ int main(int argc, char* argv[]) {
     logger->debug(logger,
                   "arg", "suppressed by level",
                   NULL);
-    free_logger(logger);
+    lol_free_logger(logger);
 }

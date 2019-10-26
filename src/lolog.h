@@ -1,25 +1,25 @@
 #include <stdio.h>
 
 typedef enum {
-    DEBUG,
-    INFO,
-    WARNING,
-    ERROR,
-    CRITICAL,
-} level_t;
+    LOL_DEBUG,
+    LOL_INFO,
+    LOL_WARNING,
+    LOL_ERROR,
+    LOL_CRITICAL,
+} lol_level_t;
 
-typedef struct lolog_t {
+typedef struct lol_logger_t {
     char *name;
-    level_t level;
+    lol_level_t level;
     FILE *fh;
 
-    void (*debug)(struct lolog_t *self, ...);
-    void (*info)(struct lolog_t *self, ...);
+    void (*debug)(struct lol_logger_t *self, ...);
+    void (*info)(struct lol_logger_t *self, ...);
 
-} lolog_t;
+} lol_logger_t;
 
-lolog_t *
-make_logger(char *name);
+lol_logger_t *
+lol_make_logger(char *name);
 
 void
-free_logger(lolog_t *logger);
+lol_free_logger(lol_logger_t *logger);
