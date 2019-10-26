@@ -13,11 +13,11 @@ static lol_config_t *default_config = NULL;
 
 static void
 _config_set_level(lol_config_t *self, char *name, lol_level_t level) {
-    lol_level_config_t *level_config = malloc(sizeof(lol_level_config_t));
-    level_config->name = name;
-    level_config->level = level;
-    level_config->next = self->level_configs;
-    self->level_configs = level_config;
+    lol_logger_config_t *logger_config = malloc(sizeof(lol_logger_config_t));
+    logger_config->name = name;
+    logger_config->level = level;
+    logger_config->next = self->logger_configs;
+    self->logger_configs = logger_config;
 }
 
 static lol_config_t *
@@ -36,16 +36,13 @@ _get_config() {
 
 static void
 _configure_logger(lol_logger_t *self) {
-    printf("lolog: configuring logger %s\n", self->name);
     lol_config_t *config = _get_config();
-    lol_level_config_t *level_config;
-    for (level_config = config->level_configs;
-         level_config != NULL;
-         level_config = level_config->next) {
-        if (strcmp(level_config->name, self->name) == 0) {
-            printf("lolog: found config for %s: level=%d\n",
-                   self->name, level_config->level);
-            self->level = level_config->level;
+    lol_logger_config_t *logger_config;
+    for (logger_config = config->logger_configs;
+         logger_config != NULL;
+         logger_config = logger_config->next) {
+        if (strcmp(logger_config->name, self->name) == 0) {
+            self->level = logger_config->level;
             break;
         }
     }
@@ -108,7 +105,7 @@ lol_make_config(lol_level_t default_level, FILE *fh) {
     lol_config_t *config = malloc(sizeof(lol_config_t));
     config->default_level = default_level;
     config->fh = fh;
-    config->level_configs = NULL;
+    config->logger_configs = NULL;
     config->set_level = _config_set_level;
     default_config = config;
     return config;
