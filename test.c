@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
     logger->debug(logger,
                   "arg", "suppressed by level",
                   NULL);
-    //liblog->critical(liblog, "crap", "this logger really cries wolf a lot");
+    liblog->critical(liblog, "crap", "this logger really cries wolf a lot");
     lol_free_logger(logger);
     lol_free_logger(liblog);
     lol_free_config(config);

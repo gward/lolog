@@ -80,23 +80,7 @@ _simple_log(lol_logger_t *self, lol_level_t level, va_list argp) {
     }
 }
 
-static void
-_simple_debug(lol_logger_t *self, ...) {
-    va_list argp;
-
-    va_start(argp, self);
-    _simple_log(self, LOL_DEBUG, argp);
-    va_end(argp);
-}
-
-static void
-_simple_info(lol_logger_t *self, ...) {
-    va_list argp;
-
-    va_start(argp, self);
-    _simple_log(self, LOL_INFO, argp);
-    va_end(argp);
-}
+#include "gen/simple-loggers.c"
 
 /* public interface */
 
@@ -124,6 +108,9 @@ lol_make_logger(char *name) {
     logger->fh = stdout;
     logger->debug = _simple_debug;
     logger->info = _simple_info;
+    logger->warning = _simple_warning;
+    logger->error = _simple_error;
+    logger->critical = _simple_critical;
     return logger;
 }
 

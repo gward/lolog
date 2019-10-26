@@ -31,6 +31,9 @@ typedef struct lol_logger_t {
 
     void (*debug)(struct lol_logger_t *self, ...);
     void (*info)(struct lol_logger_t *self, ...);
+    void (*warning)(struct lol_logger_t *self, ...);
+    void (*error)(struct lol_logger_t *self, ...);
+    void (*critical)(struct lol_logger_t *self, ...);
 
 } lol_logger_t;
 
