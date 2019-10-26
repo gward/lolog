@@ -6,7 +6,19 @@
 
 #include "lolog.h"
 
-/* private internals */
+/* private internals -- lol_config_t */
+
+static void
+_config_set_level(lol_config_t *self, char *name, lol_level_t level) {
+    lol_level_config_t *level_config = malloc(sizeof(lol_level_config_t));
+    level_config->name = name;
+    level_config->level = level;
+    level_config->next = self->level_configs;
+    self->level_configs = level_config;
+}
+
+
+/* private internals -- lol_logger_t */
 
 /**
  * Emit a log message with no attempt at formatting or escaping or anything.
@@ -55,11 +67,26 @@ _simple_info(lol_logger_t *self, ...) {
 
 /* public interface */
 
+lol_config_t *
+lol_make_config(lol_level_t default_level, FILE *fh) {
+    lol_config_t *config = malloc(sizeof(lol_config_t));
+    config->default_level = default_level;
+    config->fh = fh;
+    config->level_configs = NULL;
+    config->set_level = _config_set_level;
+    return config;
+}
+
+void
+lol_free_config(lol_config_t *config) {
+    free(config);
+}
+
 lol_logger_t *
 lol_make_logger(char *name) {
     lol_logger_t *logger = malloc(sizeof(lol_logger_t));
     logger->name = name;
-    logger->level = LOL_DEBUG;
+    logger->level = LOL_NOTSET;
     logger->fh = stdout;
     logger->debug = _simple_debug;
     logger->info = _simple_info;
