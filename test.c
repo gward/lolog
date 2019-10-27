@@ -43,16 +43,19 @@ int main(int argc, char* argv[]) {
     applog->add_context(applog, "request_id", "a925");
 
     applog->info(applog,
-                 "key1", "value blah blah o'ding \"dong\"",
-                 "key2", "value2",
-                 "key3", "value3",
+                 "hello from applog at info level",
+                 "arg1", "value blah blah o'ding \"dong\"",
+                 "arg2", "value2",
                  NULL);
-    liblog->debug(liblog, "junk", "annoying noisy library", NULL);
-    applog->debug(applog,
-                  "arg", "suppressed by level",
+    liblog->debug(liblog,
+                  "this is an annoyingly noisy library",
+                  "arg", "bla bla bla",
                   NULL);
-    applog->info(applog, NULL);       /* pointless message */
-    liblog->critical(liblog, "crap", "this logger really cries wolf a lot");
+    applog->debug(applog,
+                  "this is from applog, and should be suppressed",
+                  NULL);
+    applog->info(applog, "log message with no args is legit", NULL);
+    liblog->critical(liblog, "this logger really cries wolf a lot", NULL);
     lol_free_logger(applog);
     lol_free_logger(liblog);
     lol_free_config(config);

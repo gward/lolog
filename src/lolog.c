@@ -61,7 +61,10 @@ static char output_buf[MAX_OUTPUT];
  * human consumption.
  */
 static void
-_simple_log(lol_logger_t *self, lol_level_t level, va_list argp) {
+_simple_log(lol_logger_t *self,
+            lol_level_t level,
+            char *message,
+            va_list argp) {
     if (self->level == LOL_NOTSET) {
         _configure_logger(self);
     }
@@ -98,6 +101,15 @@ _simple_log(lol_logger_t *self, lol_level_t level, va_list argp) {
         buf[offset++] = ' ';
         remaining--;
     }
+
+    key = "message";
+    value = message;
+    nbytes = snprintf(buf + offset,
+                      remaining,
+                      "%s=%s ",
+                      key, value);
+    offset += nbytes;
+    remaining -= nbytes;
 
     // then print the key/value pairs for this message
     while (true) {

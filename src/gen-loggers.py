@@ -11,11 +11,11 @@ import sys
 
 TEMPLATE = """
 static void
-_{format}_{level_name}(lol_logger_t *self, ...) {{
+_{format}_{level_name}(lol_logger_t *self, char *message, ...) {{
     va_list argp;
 
-    va_start(argp, self);
-    _{format}_log(self, {level_const}, argp);
+    va_start(argp, message);
+    _{format}_log(self, {level_const}, message, argp);
     va_end(argp);
 }}
 """
