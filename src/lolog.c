@@ -1,4 +1,4 @@
-
+#include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -81,13 +81,22 @@ _simple_log(lol_logger_t *self, lol_level_t level, va_list argp) {
     lol_context_t *context;
     for (context = self->context; context; context = context->next) {
         key = context->key;
-        value = context->valuefunc ? context->valuefunc() : context->value;
-        nbytes = snprintf(buf + offset,
-                          remaining,
-                          "%s=%s ",
-                          key, value);
+        nbytes = snprintf(buf + offset, remaining, "%s=", key);
         offset += nbytes;
         remaining -= nbytes;
+
+        if (context->valuefunc) {
+            nbytes = context->valuefunc(buf + offset, remaining);
+        } else {
+            nbytes = snprintf(buf + offset,
+                              remaining,
+                              "%s",
+                              context->value);
+        }
+        offset += nbytes;
+        remaining -= nbytes;
+        buf[offset++] = ' ';
+        remaining--;
     }
 
     // then print the key/value pairs for this message
@@ -142,7 +151,7 @@ _add_static_context(lol_logger_t *self, char *key, char *value) {
 }
 
 static void
-_add_dynamic_context(lol_logger_t *self, char *key, char *(*valuefunc)()) {
+_add_dynamic_context(lol_logger_t *self, char *key, int (*valuefunc)(char *, size_t)) {
     lol_context_t *context = malloc(sizeof(lol_context_t));
     context->key = key;
     context->value = NULL;
