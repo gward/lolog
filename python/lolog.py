@@ -6,7 +6,7 @@ import enum
 import io
 import sys
 import time
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, TextIO
 
 
 class Level(enum.IntEnum):
@@ -21,12 +21,13 @@ class Level(enum.IntEnum):
 
 class Config:
     default_level: Level
-    outfile: io.TextIOBase      # writeable file
+    outfile: TextIO             # writeable file
+    context: List[Tuple[str, str]]
 
     def __init__(
             self,
             default_level: Level,
-            outfile: io.TextIOBase):
+            outfile: TextIO):
         self.default_level = default_level
         self.outfile = outfile
         self.context = []
@@ -94,7 +95,7 @@ def isotime():
 _config = None
 
 
-def configure_logging(default_level: Level, outfile: io.TextIOBase):
+def configure_logging(default_level: Level, outfile: TextIO) -> Config:
     global _config
     config = Config(default_level, outfile)
     _config = config
@@ -104,7 +105,7 @@ def configure_logging(default_level: Level, outfile: io.TextIOBase):
 def get_config() -> Config:
     global _config
     if _config is None:
-        configure_logging(Level.NOTSET, sys.stdout)
+        return configure_logging(Level.NOTSET, sys.stdout)
     return _config
 
 
