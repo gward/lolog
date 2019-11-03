@@ -3,10 +3,11 @@
 # prototype of the Python interface to lolog
 
 import enum
-import io
+import random
 import sys
+import threading
 import time
-from typing import Optional, List, Tuple, TextIO
+from typing import ClassVar, Optional, Dict, List, Tuple, TextIO
 
 
 class Level(enum.IntEnum):
@@ -23,6 +24,7 @@ class Config:
     default_level: Level
     outfile: TextIO             # writeable file
     context: List[Tuple[str, str]]
+    logger_level: Dict[str, Level]
 
     def __init__(
             self,
@@ -31,12 +33,27 @@ class Config:
         self.default_level = default_level
         self.outfile = outfile
         self.context = []
+        self.logger_level = {}
+
+    def set_outfile(self, outfile: TextIO):
+        self.outfile = outfile
+
+    def set_default_level(self, level: Level):
+        self.default_level = level
 
     def add_context(self, key, value):
         self.context.append((key, value))
 
+    def set_logger_level(self, name: str, level: Level):
+        self.logger_level[name] = level
+
+    def get_logger_level(self, name: str):
+        return self.logger_level.get(name, self.default_level)
+
 
 class Logger:
+    registry: ClassVar[Dict[str, "Logger"]] = {}
+
     config: Optional[Config]
 
     def __init__(
@@ -70,7 +87,7 @@ class Logger:
             self.config = get_config()
         assert self.config is not None       # make mypy happy
         if self.level is Level.NOTSET:
-            self.level = self.config.default_level
+            self.level = self.config.get_logger_level(self.name)
         if level < self.level:
             return
 
@@ -110,7 +127,9 @@ def get_config() -> Config:
 
 
 def get_logger(name):
-    return Logger(name, Level.NOTSET, [])
+    if name not in Logger.registry:
+        Logger.registry[name] = Logger(name, Level.NOTSET, [])
+    return Logger.registry[name]
 
 
 def main():
