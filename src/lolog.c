@@ -58,6 +58,18 @@ _configure_logger(lol_logger_t *self) {
     }
 }
 
+static void
+add_item(item_t *items,
+         int *item_idx,
+         char *key,
+         char *value,
+         bool alloced) {
+    items[*item_idx].key = key;
+    items[*item_idx].value = value;
+    items[*item_idx].alloced = alloced;
+    (*item_idx)++;
+}
+
 static int
 build_items(lol_logger_t *self,
             item_t *items,
@@ -67,23 +79,23 @@ build_items(lol_logger_t *self,
     int item_idx = 0;
     lol_context_t *context;
     for (context = self->context; context; context = context->next) {
-        item_t *item = items + item_idx;
-        item->key = context->key;
         if (context->valuefunc) {
-            item->value = context->valuefunc();
-            item->alloced = true;
+            add_item(items,
+                     &item_idx,
+                     context->key,
+                     context->valuefunc(),
+                     true);
         } else {
-            item->value = context->value;
-            item->alloced = false;
+            add_item(items,
+                     &item_idx,
+                     context->key,
+                     context->value,
+                     false);
         }
-        item_idx++;
     }
 
     // add the message
-    items[item_idx].key = "message";
-    items[item_idx].value = message;
-    items[item_idx].alloced = false;
-    item_idx++;
+    add_item(items, &item_idx, "message", message, false);
 
     // and finish with the items for this line
     char *key, *value;
@@ -93,10 +105,7 @@ build_items(lol_logger_t *self,
             break;
         }
         value = va_arg(argp, char *);
-        items[item_idx].key = key;
-        items[item_idx].value = value;
-        items[item_idx].alloced = false;
-        item_idx++;
+        add_item(items, &item_idx, key, value, false);
     }
 
     return item_idx;            /* number of items */
