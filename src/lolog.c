@@ -235,6 +235,11 @@ lol_make_config(lol_level_t default_level, FILE *fh) {
 
 void
 lol_free_config(lol_config_t *config) {
+    lol_logger_config_t *lconfig, *next;
+    for (lconfig = config->logger_configs; lconfig != NULL; lconfig = next) {
+        next = lconfig->next;
+        free(lconfig);
+    }
     free(config);
 }
 
@@ -257,5 +262,10 @@ lol_make_logger(char *name) {
 
 void
 lol_free_logger(lol_logger_t *logger) {
+    lol_context_t *context, *next;
+    for (context = logger->context; context != NULL; context = next) {
+        next = context->next;
+        free(context);
+    }
     free(logger);
 }
