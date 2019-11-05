@@ -25,10 +25,17 @@ typedef struct lol_logger_config_t {
 
 typedef struct lol_config_t {
     lol_level_t default_level;
+    lol_context_t *context;
     FILE *fh;
     lol_logger_config_t *logger_configs;
 
     void (*set_level)(struct lol_config_t *self, char *name, lol_level_t level);
+    void (*add_context)(struct lol_config_t *self,
+                        char *key,
+                        char *value);
+    void (*add_dynamic_context)(struct lol_config_t *self,
+                                char *key,
+                                char *(*valuefunc)());
 } lol_config_t;
 
 typedef struct lol_logger_t {

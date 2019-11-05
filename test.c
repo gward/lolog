@@ -29,11 +29,12 @@ int main(int argc, char* argv[]) {
     lol_config_t *config = lol_make_config(LOL_DEBUG, stdout);
     config->set_level(config, "myapp", LOL_INFO);
     config->set_level(config, "lib", LOL_SILENT);
+    config->set_level(config, "lib", LOL_INFO);
+    config->add_dynamic_context(config, "ts", timefunc);
 
     lol_logger_t *applog = lol_make_logger("myapp");
     lol_logger_t *liblog = lol_make_logger("lib");
 
-    applog->add_dynamic_context(applog, "ts", timefunc);
     applog->add_context(applog, "request_id", "a925");
 
     applog->info(applog,
@@ -49,7 +50,10 @@ int main(int argc, char* argv[]) {
                   "this is from applog, and should be suppressed",
                   NULL);
     applog->info(applog, "log message with no args is legit", NULL);
-    liblog->critical(liblog, "this logger really cries wolf a lot", NULL);
+    liblog->critical(liblog,
+                     "this logger really cries wolf a lot",
+                     "blaaaaaaaaah", "wha wha wha wha!",
+                     NULL);
     lol_free_logger(applog);
     lol_free_logger(liblog);
     lol_free_config(config);
