@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -34,6 +33,17 @@ _get_config() {
 
 /* private internals -- lol_logger_t */
 
+#define MAX_ITEMS 64
+
+// includes terminating nul character
+#define MAX_OUTPUT 4096
+
+typedef struct {
+    char *key;
+    char *value;
+    bool alloced;
+} item_t;
+
 static void
 _configure_logger(lol_logger_t *self) {
     lol_config_t *config = _get_config();
@@ -48,12 +58,90 @@ _configure_logger(lol_logger_t *self) {
     }
 }
 
+static int
+build_items(lol_logger_t *self,
+            item_t *items,
+            char *message,
+            va_list argp) {
+    // build list of items (key/value pairs), starting with context
+    int item_idx = 0;
+    lol_context_t *context;
+    for (context = self->context; context; context = context->next) {
+        item_t *item = items + item_idx;
+        item->key = context->key;
+        if (context->valuefunc) {
+            item->value = context->valuefunc();
+            item->alloced = true;
+        } else {
+            item->value = context->value;
+            item->alloced = false;
+        }
+        item_idx++;
+    }
 
-// includes terminating nul character
-#define MAX_OUTPUT 4096
+    // add the message
+    items[item_idx].key = "message";
+    items[item_idx].value = message;
+    items[item_idx].alloced = false;
+    item_idx++;
 
-// XXX this should be thread local!
-static char output_buf[MAX_OUTPUT];
+    // and finish with the items for this line
+    char *key, *value;
+    while (true) {
+        key = va_arg(argp, char *);
+        if (!key) {
+            break;
+        }
+        value = va_arg(argp, char *);
+        items[item_idx].key = key;
+        items[item_idx].value = value;
+        items[item_idx].alloced = false;
+        item_idx++;
+    }
+
+    return item_idx;            /* number of items */
+}
+
+static void
+_simple_format(item_t *items, int num_items, char *buf, size_t max_output) {
+    // max_output - 1 to leave room for the newline
+    size_t remaining = max_output - 1;
+
+    // format all items into the output buffer, and then write it
+    bool truncated = false;
+    int offset = 0;
+    for (int item_idx = 0; item_idx < num_items; item_idx++) {
+        item_t item = items[item_idx];
+        size_t key_len = strlen(item.key);
+        size_t value_len = strlen(item.value);
+        int needed = key_len + 1 + value_len + 1;
+        if (!truncated && needed > remaining) {
+            truncated = true;   /* print warning? */
+        }
+
+        if (!truncated) {
+            strncpy(buf + offset,
+                    item.key,
+                    remaining);
+            buf[offset + key_len] = '=';
+            offset += key_len + 1;
+            remaining -= key_len + 1;
+
+            strncpy(buf + offset,
+                    item.value,
+                    remaining);
+            bool is_last = (item_idx == num_items - 1);
+            buf[offset + value_len] = is_last ? '\n' : ' ';
+            offset += value_len + 1;
+            remaining -= value_len + 1;
+            buf[offset] = 0;
+        }
+
+        if (item.alloced) {
+            free(item.value);
+        }
+    }
+}
 
 /**
  * Emit a log message with no attempt at formatting or escaping or anything.
@@ -73,61 +161,11 @@ _simple_log(lol_logger_t *self,
         return;
     }
 
-    char *key, *value;
-    char *buf = output_buf;
-    int offset = 0;
-    size_t remaining = MAX_OUTPUT;
-    int nbytes;
-    remaining--;                /* leave room for newline */
+    item_t items[MAX_ITEMS];
+    int num_items = build_items(self, items, message, argp);
 
-    // print context key/value pairs first (if any)
-    lol_context_t *context;
-    for (context = self->context; context; context = context->next) {
-        key = context->key;
-        nbytes = snprintf(buf + offset, remaining, "%s=", key);
-        offset += nbytes;
-        remaining -= nbytes;
-
-        if (context->valuefunc) {
-            nbytes = context->valuefunc(buf + offset, remaining);
-        } else {
-            nbytes = snprintf(buf + offset,
-                              remaining,
-                              "%s",
-                              context->value);
-        }
-        offset += nbytes;
-        remaining -= nbytes;
-        buf[offset++] = ' ';
-        remaining--;
-    }
-
-    key = "message";
-    value = message;
-    nbytes = snprintf(buf + offset,
-                      remaining,
-                      "%s=%s ",
-                      key, value);
-    offset += nbytes;
-    remaining -= nbytes;
-
-    // then print the key/value pairs for this message
-    while (true) {
-        key = va_arg(argp, char *);
-        if (!key) {
-            offset--;           /* overwrite last trailing space */
-            buf[offset++] = '\n';
-            buf[offset++] = 0;
-            break;
-        }
-        value = va_arg(argp, char *);
-        nbytes = snprintf(buf + offset,
-                          remaining,
-                          "%s=%s ",
-                          key, value);
-        offset += nbytes;
-        remaining -= nbytes;
-    }
+    char buf[MAX_OUTPUT];
+    _simple_format(items, num_items, buf, MAX_OUTPUT);
 
     fputs(buf, self->fh);
     fflush(self->fh);
@@ -163,7 +201,7 @@ _add_static_context(lol_logger_t *self, char *key, char *value) {
 }
 
 static void
-_add_dynamic_context(lol_logger_t *self, char *key, int (*valuefunc)(char *, size_t)) {
+_add_dynamic_context(lol_logger_t *self, char *key, char *(*valuefunc)()) {
     lol_context_t *context = malloc(sizeof(lol_context_t));
     context->key = key;
     context->value = NULL;

@@ -13,7 +13,7 @@ typedef enum {
 typedef struct lol_context_t {
     char *key;
     char *value;
-    int (*valuefunc)(char *, size_t);
+    char *(*valuefunc)();
     struct lol_context_t *next;
 } lol_context_t;
 
@@ -48,7 +48,7 @@ typedef struct lol_logger_t {
                         char *value);
     void (*add_dynamic_context)(struct lol_logger_t *self,
                                 char *key,
-                                int (*valuefunc)(char *, size_t));
+                                char *(*valuefunc)());
 
 } lol_logger_t;
 

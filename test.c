@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,27 +7,22 @@
 
 #include <lolog.h>
 
-static int
-timefunc(char *buf, size_t size) {
-    const char *fmt = "%FT%T";
-    const int tslen = 19 + 7;       /* yyyy-mm-ddThh:mm:ss.uuuuuu */
-
-    if (size < tslen + 1) {
-        return 0;
-    }
-
+static char *
+timefunc() {
+    // Hmmm: this returns a dynamically allocated string, which the
+    // logger frees after output.
+    char *buf = calloc(sizeof(char), 40);
     struct timeval now_tv;
     if (gettimeofday(&now_tv, NULL) < 0) {
-        return 0;
+        return NULL;
     }
 
-    int nbytes = 0;
+    const int tslen = 19;       /* yyyy-mm-ddThh:mm:ss */
     struct tm now_tm;
     localtime_r(&now_tv.tv_sec, &now_tm);
-    nbytes += strftime(buf, size - 7, fmt, &now_tm);
-    assert(now_tv.tv_usec < 1000000);
-    nbytes += snprintf(buf + 19, 7 + 1, ".%06ld", now_tv.tv_usec);
-    return nbytes;
+    strftime(buf, 40, "%FT%T", &now_tm);
+    sprintf(buf + tslen, ".%06ld", now_tv.tv_usec);
+    return buf;
 }
 
 int main(int argc, char* argv[]) {
