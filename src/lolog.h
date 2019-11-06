@@ -40,6 +40,7 @@ typedef struct lol_config_t {
 
 typedef struct lol_logger_t {
     char *name;
+    lol_config_t *config;
     lol_level_t level;
     FILE *fh;
     lol_context_t *context;

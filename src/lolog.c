@@ -98,6 +98,7 @@ typedef struct {
 static void
 _configure_logger(lol_logger_t *self) {
     lol_config_t *config = _get_config();
+    self->config = config;
     lol_logger_config_t *logger_config;
     for (logger_config = config->logger_configs;
          logger_config != NULL;
@@ -149,6 +150,7 @@ build_items(lol_logger_t *self,
             va_list argp) {
     // build list of items (key/value pairs), starting with context
     int item_idx = 0;
+    add_context_items(items, &item_idx, self->config->context);
     add_context_items(items, &item_idx, self->context);
 
     // add the message
