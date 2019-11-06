@@ -8,6 +8,9 @@
 
 /* private internals -- shared across types */
 
+// map lol_level_t to string version
+static char *level_label[] = {"", "D", "I", "W", "E", "C", ""};
+
 static void
 free_context(lol_context_t *context) {
     lol_context_t *next;
@@ -145,6 +148,7 @@ add_context_items(item_t *items,
 
 static int
 build_items(lol_logger_t *self,
+            lol_level_t level,
             item_t *items,
             char *message,
             va_list argp) {
@@ -153,7 +157,9 @@ build_items(lol_logger_t *self,
     add_context_items(items, &item_idx, self->config->context);
     add_context_items(items, &item_idx, self->context);
 
-    // add the message
+    // add level, name, message
+    add_item(items, &item_idx, "level", level_label[level], false);
+    add_item(items, &item_idx, "name", self->name, false);
     add_item(items, &item_idx, "message", message, false);
 
     // and finish with the items for this line
@@ -230,7 +236,7 @@ simple_log(lol_logger_t *self,
     }
 
     item_t items[MAX_ITEMS];
-    int num_items = build_items(self, items, message, argp);
+    int num_items = build_items(self, level, items, message, argp);
 
     char buf[MAX_OUTPUT];
     simple_format(items, num_items, buf, MAX_OUTPUT);
