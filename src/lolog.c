@@ -71,7 +71,7 @@ config_add_dynamic_context(lol_config_t *self,
 }
 
 static lol_config_t *
-_get_config() {
+get_config() {
     if (!default_config) {
         fprintf(stderr,
                 "lolog: cannot configure logger: "
@@ -96,8 +96,8 @@ typedef struct {
 } item_t;
 
 static void
-_configure_logger(lol_logger_t *self) {
-    lol_config_t *config = _get_config();
+configure_logger(lol_logger_t *self) {
+    lol_config_t *config = get_config();
     self->config = config;
     lol_logger_config_t *logger_config;
     for (logger_config = config->logger_configs;
@@ -171,7 +171,7 @@ build_items(lol_logger_t *self,
 }
 
 static void
-_simple_format(item_t *items, int num_items, char *buf, size_t max_output) {
+simple_format(item_t *items, int num_items, char *buf, size_t max_output) {
     // max_output - 1 to leave room for the newline
     size_t remaining = max_output - 1;
 
@@ -217,12 +217,12 @@ _simple_format(item_t *items, int num_items, char *buf, size_t max_output) {
  * human consumption.
  */
 static void
-_simple_log(lol_logger_t *self,
-            lol_level_t level,
-            char *message,
-            va_list argp) {
+simple_log(lol_logger_t *self,
+           lol_level_t level,
+           char *message,
+           va_list argp) {
     if (self->level == LOL_NOTSET) {
-        _configure_logger(self);
+        configure_logger(self);
     }
 
     if (level < self->level) {
@@ -233,7 +233,7 @@ _simple_log(lol_logger_t *self,
     int num_items = build_items(self, items, message, argp);
 
     char buf[MAX_OUTPUT];
-    _simple_format(items, num_items, buf, MAX_OUTPUT);
+    simple_format(items, num_items, buf, MAX_OUTPUT);
 
     fputs(buf, self->fh);
     fflush(self->fh);
@@ -291,11 +291,11 @@ lol_make_logger(char *name) {
     logger->level = LOL_NOTSET;
     logger->fh = stdout;
     logger->context = NULL;
-    logger->debug = _simple_debug;
-    logger->info = _simple_info;
-    logger->warning = _simple_warning;
-    logger->error = _simple_error;
-    logger->critical = _simple_critical;
+    logger->debug = simple_debug;
+    logger->info = simple_info;
+    logger->warning = simple_warning;
+    logger->error = simple_error;
+    logger->critical = simple_critical;
     logger->add_context = logger_add_static_context;
     logger->add_dynamic_context = logger_add_dynamic_context;
     return logger;
