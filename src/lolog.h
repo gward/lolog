@@ -18,7 +18,7 @@ typedef struct lol_context_t {
 } lol_context_t;
 
 typedef struct lol_logger_config_t {
-    char *name;
+    char *pattern;
     lol_level_t level;
     struct lol_logger_config_t *next;
 } lol_logger_config_t;

@@ -1,3 +1,4 @@
+#include <fnmatch.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -51,9 +52,9 @@ append_context(lol_context_t **head,
 static lol_config_t *default_config = NULL;
 
 static void
-config_set_level(lol_config_t *self, char *name, lol_level_t level) {
+config_set_level(lol_config_t *self, char *pattern, lol_level_t level) {
     lol_logger_config_t *logger_config = malloc(sizeof(lol_logger_config_t));
-    logger_config->name = name;
+    logger_config->pattern = pattern;
     logger_config->level = level;
     logger_config->next = self->logger_configs;
     self->logger_configs = logger_config;
@@ -106,7 +107,8 @@ configure_logger(lol_logger_t *self) {
     for (logger_config = config->logger_configs;
          logger_config != NULL;
          logger_config = logger_config->next) {
-        if (strcmp(logger_config->name, self->name) == 0) {
+
+        if (fnmatch(logger_config->pattern, self->name, 0) == 0) {
             self->level = logger_config->level;
             break;
         }
