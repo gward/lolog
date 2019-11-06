@@ -259,6 +259,7 @@ lol_config_t *
 lol_make_config(lol_level_t default_level, FILE *fh) {
     lol_config_t *config = malloc(sizeof(lol_config_t));
     config->default_level = default_level;
+    config->context = NULL;
     config->fh = fh;
     config->logger_configs = NULL;
     config->set_level = config_set_level;
