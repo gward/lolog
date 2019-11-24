@@ -4,3 +4,6 @@ test
 src/gen/
 *.so
 *.o
+__pycache__
+.mypy_cache
+venv
