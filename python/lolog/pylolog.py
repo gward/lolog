@@ -1,11 +1,13 @@
 # pure python implementation of lolog, in case ctypes does not work
 
+from __future__ import annotations
+
+import collections
 import enum
-import random
 import sys
 import threading
 import time
-from typing import ClassVar, Optional, Dict, List, Tuple, TextIO
+from typing import ClassVar, Optional, Callable, Dict, List, Tuple, TextIO
 
 
 class Level(enum.IntEnum):
@@ -18,23 +20,31 @@ class Level(enum.IntEnum):
     SILENT = 6
 
 
+StageType = Callable[["Config", "Record"], Optional["Record"]]
+
+
 class Config:
-    default_level: Level
-    outfile: TextIO             # writeable file
+    # default instance, managed by init() and get_instance()
+    _instance: ClassVar[Optional[Config]] = None
+
+    mutex: threading.Lock
     context: List[Tuple[str, str]]
+    local: threading.local
+    default_level: Level
     logger_level: Dict[str, Level]
+    pipeline: List[StageType]
+    logger: Dict[str, Logger]
+    time: Callable[[], float]
 
-    def __init__(
-            self,
-            default_level: Level,
-            outfile: TextIO):
-        self.default_level = default_level
-        self.outfile = outfile
+    def __init__(self, default_level: Level = Level.NOTSET):
+        self.mutex = threading.Lock()
         self.context = []
+        self.local = threading.local()
+        self.default_level = default_level
         self.logger_level = {}
-
-    def set_outfile(self, outfile: TextIO):
-        self.outfile = outfile
+        self.pipeline = []
+        self.logger = {}
+        self.time = time.time
 
     def set_default_level(self, level: Level):
         self.default_level = level
@@ -42,34 +52,68 @@ class Config:
     def add_context(self, key, value):
         self.context.append((key, value))
 
+    def add_local_context(self, key, value):
+        self.get_local_context().append((key, value))
+
+    def get_context(self) -> List[Tuple[str, str]]:
+        return self.context
+
+    def get_local_context(self) -> List[Tuple[str, str]]:
+        try:
+            return self.local.context
+        except AttributeError:
+            self.local.context = []
+            return self.local.context
+
+    def clear_local_context(self):
+        del self.local.context
+
     def set_logger_level(self, name: str, level: Level):
         self.logger_level[name] = level
 
     def get_logger_level(self, name: str):
         return self.logger_level.get(name, self.default_level)
 
+    def add_stage(self, stage: StageType):
+        try:
+            stage.mut
+            stage.fmt
+            stage.out
+        except AttributeError:
+            raise TypeError(
+                'pipeline stage must provide attrs mut, fmt, and out')
+
+        self.pipeline.append(stage)
+
+    def get_logger(self, name: str) -> Logger:
+        with self.mutex:
+            if name not in self.logger:
+                self.logger[name] = Logger(self, name)
+            return self.logger[name]
+
+
+Record = collections.namedtuple(
+    'Record', ['time', 'name', 'level', 'message', 'context', 'outbuf'])
+
 
 class Logger:
-    registry: ClassVar[Dict[str, "Logger"]] = {}
-
-    config: Optional[Config]
-
-    def __init__(
-            self,
-            name: str,
-            level: Level,
-            context: List[Tuple[str, str]]):
+    def __init__(self, config: Config, name: str):
+        self.config = config
         self.name = name
-        self.level = level
-        self.context = context
-        self.config = None
+        self.context: List[Tuple[str, str]] = []
 
     def __str__(self):
-        return "{} ({})".format(self.name, self.level.name)
+        return '{}'.format(self.name)
 
     def __repr__(self):
-        return "<{} at 0x{:x}: {}>".format(
+        return '<{} at 0x{:x}: {}>'.format(
             self.__class__.__name__, id(self), self)
+
+    def add_global_context(self, key: str, value):
+        self.config.add_context(key, value)
+
+    def add_local_context(self, key: str, value):
+        self.config.add_local_context(key, value)
 
     def add_context(self, key, value):
         self.context.append((key, value))
@@ -81,55 +125,111 @@ class Logger:
         self._log(Level.INFO, message, **items)
 
     def _log(self, level: Level, message: str, **items):
-        if self.config is None:
-            self.config = get_config()
-        assert self.config is not None       # make mypy happy
-        if self.level is Level.NOTSET:
-            self.level = self.config.get_logger_level(self.name)
-        if level < self.level:
-            return
+        config = self.config
 
-        all_items = self.config.context + self.context + [
-            ("level", str(level.name[0])),
-            ("name", self.name),
-            ("message", message),
+        context = [
+            *config.get_context(),
+            *config.get_local_context(),
+            *self.context,
+            *items.items(),
         ]
-        all_items += items.items()
-        data = ["{}={}".format(key, value() if callable(value) else value)
-                for (key, value) in all_items]
+        record = Record(
+            time=config.time(),
+            name=self.name,
+            level=level,
+            message=message,
+            context=context,
+            outbuf=[])
 
-        self.config.outfile.write(" ".join(data) + "\n")
-
-
-def isotime():
-    now = time.time()
-    return (time.strftime("%FT%T", time.localtime(now)) +
-            "{:06f}".format(now % 1)[1:])
-
-
-_config = None
+        for stage in config.pipeline:
+            record = stage(config, record)
+            if record is None:
+                break
 
 
-def configure_logging(default_level: Level, outfile: TextIO) -> Config:
-    global _config
-    config = Config(default_level, outfile)
-    _config = config
-    return _config
+def isotime(now):
+    return (time.strftime('%FT%T', time.localtime(now)) +
+            '{:06f}'.format(now % 1)[1:])
+
+
+def init(level: Level = Level.DEBUG,
+         format: str = "simple",
+         stream: TextIO = sys.stderr) -> Config:
+    if Config._instance is not None:
+        raise RuntimeError(
+            'lolog has already been initialized; '
+            'use get_config() to configure it more')
+
+    config = Config._instance = Config(level)
+
+    # setup the pipeline
+    if level is not None:
+        config.add_stage(filter_level)
+    if format is not None:
+        config.add_stage(FORMATTER[format])
+    if stream is not None:
+        @stage(out=True)
+        def output_stream(config: Config, record: Record) -> Optional[Record]:
+            if not record.outbuf:
+                raise RuntimeError(
+                    'lolog pipeline error: '
+                    'cannot output log record that has not been formatted')
+
+            stream.write(''.join(record.outbuf))
+            return record
+
+        config.add_stage(output_stream)
+
+    return config
+
+
+def get_config() -> Config:
+    if Config._instance is None:
+        Config._instance = Config()
+    return Config._instance
+
+
+def get_logger(name):
+    return get_config().get_logger(name)
+
+
+def stage(mut=False, fmt=False, out=False):
+    def wrap(func):
+        func.mut = mut
+        func.fmt = fmt
+        func.out = out
+        return func
+
+    return wrap
+
+
+@stage()
+def filter_level(config: Config, record: Record) -> Optional[Record]:
+    """filter log records based on level"""
+    if config.get_logger_level(record.name) <= record.level:
+        return record
+    return None
+
+
+@stage(fmt=True)
+def format_simple(config: Config, record: Record) -> Optional[Record]:
+    items = [
+        ('time', isotime(record.time)),
+        ('name', record.name),
+        ('level', record.level.name),
+        ('message', record.message),
+    ] + record.context
+    data = ['{}={}'.format(key, value() if callable(value) else value)
+            for (key, value) in items]
+    record.outbuf.append(' '.join(data) + '\n')
+    return record
+
+
+FORMATTER = {
+    "simple": format_simple,
+}
 
 
 # aliases for compatibility with C interface
 make_config = Config
 make_logger = Logger
-
-
-def get_config() -> Config:
-    global _config
-    if _config is None:
-        return configure_logging(Level.NOTSET, sys.stdout)
-    return _config
-
-
-def get_logger(name):
-    if name not in Logger.registry:
-        Logger.registry[name] = Logger(name, Level.NOTSET, [])
-    return Logger.registry[name]

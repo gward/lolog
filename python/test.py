@@ -1,6 +1,6 @@
 #!venv/bin/python
 
-# prototype of the Python interface to lolog
+# informal test for the Python interface to lolog
 
 import random
 import sys
@@ -10,9 +10,9 @@ import lolog
 
 
 def main():
-    config = lolog.get_config()
-    config.set_outfile(sys.stdout)
-    config.add_context("time", lolog.isotime)
+    config = lolog.init(
+        level=lolog.Level.DEBUG,
+        stream=sys.stdout)
     config.set_logger_level("lib.guts", lolog.Level.INFO)
 
     simple_test()
@@ -46,15 +46,15 @@ def mt_test():
 
     num_threads = 10
     log = lolog.get_logger("myapp.mt")
-    log.add_context("threads", str(num_threads))
 
     def worker(name):
-        tid = threading.current_thread().ident
         count = random.randint(10, 20)
+        log.add_local_context("tid", threading.current_thread().ident)
+        log.add_local_context("count", count)
         for idx in range(1, count + 1):
-            message = f"message {idx}/{count} from {name} ({tid})"
-            log.info(message, idx=idx, count=count)
+            log.info("doing some work", iter=idx)
 
+    log.info("starting multithreaded test", num_threads=num_threads)
     threads = []
     for idx in range(num_threads):
         name = f"thread {idx}"
@@ -70,4 +70,3 @@ def mt_test():
 
 if __name__ == "__main__":
     main()
-

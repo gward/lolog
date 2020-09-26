@@ -1,14 +1,27 @@
 
 try:
-    from .clolog import make_config, make_logger
+    raise ImportError("C version disabled for now")
+    from .clolog import (
+        make_config,
+        make_logger,
+    )
 except (ImportError, OSError) as err:
     print(err)
     print("fallback to Python implementation")
     from .pylolog import (
         Level,
-        get_config,
-        get_logger,
+        init,
         make_config,
         make_logger,
-        isotime,
+        get_config,
+        get_logger,
     )
+
+__all__ = [
+    'Level',
+    'init',
+    'make_config',
+    'make_logger',
+    'get_config',
+    'get_logger',
+]
