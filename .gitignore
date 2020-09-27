@@ -7,3 +7,4 @@ src/gen/
 __pycache__
 .mypy_cache
 venv
+doc/_build
