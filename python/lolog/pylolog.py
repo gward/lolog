@@ -36,11 +36,11 @@ class Config:
     logger: Dict[str, Logger]
     time: Callable[[], float]
 
-    def __init__(self, default_level: Level = Level.NOTSET):
+    def __init__(self):
         self.mutex = threading.Lock()
         self.context = []
         self.local = threading.local()
-        self.default_level = default_level
+        self.default_level = Level.NOTSET
         self.logger_level = {}
         self.pipeline = []
         self.logger = {}
@@ -155,12 +155,13 @@ def isotime(now):
 def init(level: Level = Level.DEBUG,
          format: str = "simple",
          stream: TextIO = sys.stderr) -> Config:
-    if Config._instance is not None:
+    config = get_config()
+    if config.pipeline:
         raise RuntimeError(
             'lolog has already been initialized; '
             'use get_config() to configure it more')
 
-    config = Config._instance = Config(level)
+    config.default_level = level
 
     # setup the pipeline
     if level is not None:

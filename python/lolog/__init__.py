@@ -17,6 +17,14 @@ except (ImportError, OSError) as err:
         get_logger,
     )
 
+NOTSET = Level.NOTSET
+DEBUG = Level.DEBUG
+INFO = Level.INFO
+WARNING = Level.WARNING
+ERROR = Level.ERROR
+CRITICAL = Level.CRITICAL
+SILENT = Level.SILENT
+
 __all__ = [
     'Level',
     'init',

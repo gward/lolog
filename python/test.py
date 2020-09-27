@@ -2,6 +2,7 @@
 
 # informal test for the Python interface to lolog
 
+import os
 import random
 import sys
 import threading
@@ -11,7 +12,7 @@ import lolog
 
 def main():
     config = lolog.init(
-        level=lolog.Level.DEBUG,
+        level=lolog.DEBUG,
         stream=sys.stdout)
     config.set_logger_level("lib.guts", lolog.Level.INFO)
 
