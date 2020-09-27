@@ -72,6 +72,12 @@ lolog's builtin `simple` format is way too simple. It's easy for humans to read,
 
 If you have invented a brilliant new markup language that is destined to replace JSON, you'll have to write your own formatter.
 
+## Context
+
+The key to structured logging is that list of key-value pairs included with every log message. But what's lurking unseen is the log _context_, which is just a bunch of additional key-value pairs that are automatically added to the log message.
+
+In fact, lolog has several levels of context: global, thread-local, and logger. Global context lives in the `Config` object, and that's where you put things like the process ID. Thread-local context also lives in the `Config` object, but is used for values that vary by thread: current request ID, current username, current client IP address, etc. Finally, logger context exists in each logger object. Its use is limited only by your imagination.
+
 ## Output
 
 lolog's builtin facilities output are its least flexible feature. In Python, you can write logs to any writeable file-like object: period. In C, you can write logs to any stdio stream: period.
