@@ -7,7 +7,7 @@ import enum
 import sys
 import threading
 import time
-from typing import ClassVar, Optional, Callable, Dict, List, Tuple, TextIO
+from typing import ClassVar, Optional, Any, Callable, Dict, List, Tuple, TextIO
 
 
 class Level(enum.IntEnum):
@@ -118,20 +118,20 @@ class Logger:
     def add_context(self, key, value):
         self.context.append((key, value))
 
-    def debug(self, message: str, **items):
-        self._log(Level.DEBUG, message, **items)
+    def debug(self, message: str, **kwargs):
+        self._log(Level.DEBUG, message, **kwargs)
 
-    def info(self, message: str, **items):
-        self._log(Level.INFO, message, **items)
+    def info(self, message: str, **kwargs):
+        self._log(Level.INFO, message, **kwargs)
 
-    def _log(self, level: Level, message: str, **items):
+    def _log(self, level: Level, message: str, items: List[Tuple[str, Any]]):
         config = self.config
 
         context = [
             *config.get_context(),
             *config.get_local_context(),
             *self.context,
-            *items.items(),
+            *items,
         ]
         record = Record(
             time=config.time(),
