@@ -1,75 +1,40 @@
 """intercept calls to the standard logging module"""
 
-import threading
+import logging
+from typing import Type
 
 from .pylolog import Config, Level
 
 
-class InterceptManager:
-    """replacement for logging.Manager class"""
-
-    def __init__(self, cfg):
-        self.mutex = threading.Lock()
+class Interceptor:
+    def __init__(self, cfg: Config, logger_cls: Type):
         self.cfg = cfg
-        self.logger = {}
+        self.logger_cls = logger_cls
+        self.save = {}
 
-    def getLogger(self, name):
-        with self.mutex:
-            if name not in self.logger:
-                self.logger[name] = InterceptLogger(self.cfg, name)
-            return self.logger[name]
+    def intercept(self):
+        for level in [
+                Level.DEBUG,
+                Level.INFO,
+                Level.WARNING,
+                Level.ERROR,
+                Level.CRITICAL,
+        ]:
+            name = level.name
+            lower_name = name.lower()
+            locals = {'cfg': self.cfg, 'Level': level}
+            func_text = """
+def {lower_name}(self, msg, *args, **kwargs):
+    items = [("arg%d" % (i + 1), arg) for (i, arg) in enumerate(args)]
+    items += kwargs.items()
+    cfg.get_logger(self.name)._log(Level.{name}, msg, items)
+""".format(name=name, lower_name=lower_name)
 
+            exec(func_text, locals, locals)
+            self.save[lower_name] = getattr(logging.Logger, lower_name)
+            setattr(logging.Logger, lower_name, locals[lower_name])
 
-class InterceptLogger:
-    """replacement for logging.Logger class"""
-    def __init__(self, cfg, name):
-        self.logger = cfg.get_logger(name)
-
-    def debug(self, msg, *args, **kwargs):
-        self._log(Level.DEBUG, msg, *args, **kwargs)
-
-    def info(self, msg, *args, **kwargs):
-        self._log(Level.INFO, msg, *args, **kwargs)
-
-    def warning(self, msg, *args, **kwargs):
-        self._log(Level.WARNING, msg, *args, **kwargs)
-
-    def error(self, msg, *args, **kwargs):
-        self._log(Level.ERROR, msg, *args, **kwargs)
-
-    def critical(self, msg, *args, **kwargs):
-        self._log(Level.CRITICAL, msg, *args, **kwargs)
-
-    def exception(self, msg, *args, exc_info=True, **kwargs):
-        pass                    # ummm...
-
-    def _log(self, level, msg, *args, **kwargs):
-        items = [("arg%d" % (i + 1), arg)
-                 for (i, arg) in enumerate(args)]
-        items += kwargs.items()
-        self.logger._log(level, msg, items)
-
-
-_save_manager = None
-_save_root = None
-
-
-def intercept(cfg: Config):
-    global _save_manager, _save_root
-    import logging
-
-    _save_manager = logging.Logger.manager
-    _save_root = logging.Logger.root
-
-    manager = InterceptManager(cfg)
-    logging.Logger.manager = manager
-    logging.Logger.root = manager.getLogger("")
-
-
-def undo_intercept():
-    global _save_manager, _save_root
-    import logging
-
-    logging.Logger.manager = _save_manager
-    logging.Logger.root = _save_root
-    _save_manager = _save_root = None
+    def undo(self):
+        for (name, method) in self.save.items():
+            setattr(logging.Logger, name, method)
+        self.save.clear()
