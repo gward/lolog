@@ -1,5 +1,6 @@
 import io
 
+import freezegun
 import pytest
 
 import lolog
@@ -32,3 +33,26 @@ def test_init_custom():
     outfile = io.StringIO()
     cfg = lolog.init(stream=outfile, level=lolog.WARNING)
     assert cfg.default_level == lolog.WARNING
+
+
+# this test must run with TZ=UTC so that timestamps in log output match
+# expectations
+@freezegun.freeze_time('2020-01-14T13:14:43', auto_tick_seconds=0.4)
+def test_simple_logging():
+    outfile = io.StringIO()
+    cfg = lolog.make_config()
+    cfg.configure(stream=outfile)
+
+    log_foo = cfg.get_logger('foo')
+
+    log_foo.debug('message 1', name='ted', age=43)
+    log_foo.info('message 2', request_id='34a9')
+
+    text = outfile.getvalue().splitlines()
+    assert len(text) == 2
+    assert text[0] == (
+        'time=2020-01-14T13:14:43.000000 name=foo level=DEBUG '
+        'message=message 1 name=ted age=43')
+    assert text[1] == (
+        'time=2020-01-14T13:14:43.400000 name=foo level=INFO '
+        'message=message 2 request_id=34a9')
