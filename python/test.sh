@@ -2,5 +2,6 @@
 
 set -e
 
-flake8 .
-PYTHONPATH=$(pwd) pytest tests
+dir=$(dirname $0)
+flake8 $dir
+PYTHONPATH=$dir pytest $dir/tests
