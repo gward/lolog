@@ -16,8 +16,9 @@ def test_init_defaults():
     assert cfg.default_level == lolog.DEBUG
     assert cfg.pipeline[0] is pylolog.filter_level
     assert cfg.pipeline[1] is pylolog.format_simple
-    assert callable(cfg.pipeline[2])
-    assert cfg.pipeline[2].__name__ == 'output_stream'
+    assert cfg.pipeline[1].fmt
+    assert cfg.pipeline[2] is pylolog.output_stream
+    assert cfg.pipeline[2].out
 
     # second call is rejected
     with pytest.raises(RuntimeError) as ctx:

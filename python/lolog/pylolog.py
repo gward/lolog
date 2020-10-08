@@ -35,6 +35,7 @@ class Config:
     default_level: Level
     logger_level: Dict[str, Level]
     logger_patterns: List[Tuple[re.regex, Level]]
+    stream: Optional[TextIO]
     pipeline: List[StageType]
     logger: Dict[str, Logger]
     time: Callable[[], float]
@@ -46,9 +47,25 @@ class Config:
         self.default_level = Level.NOTSET
         self.logger_level = {}
         self.logger_patterns = []
+        self.stream = None
         self.pipeline = []
         self.logger = {}
         self.time = time.time
+
+    def configure(
+            self, level: Level = Level.DEBUG,
+            format: str = "simple",
+            stream: TextIO = sys.stderr):
+        self.default_level = level
+
+        # setup the pipeline
+        if level is not None:
+            self.add_stage(filter_level)
+        if format is not None:
+            self.add_stage(FORMATTER[format])
+        if stream is not None:
+            self.stream = stream
+            self.add_stage(output_stream)
 
     def set_default_level(self, level: Level):
         self.default_level = level
@@ -180,26 +197,7 @@ def init(level: Level = Level.DEBUG,
         raise RuntimeError(
             'lolog has already been initialized; '
             'use get_config() to configure it more')
-
-    config.default_level = level
-
-    # setup the pipeline
-    if level is not None:
-        config.add_stage(filter_level)
-    if format is not None:
-        config.add_stage(FORMATTER[format])
-    if stream is not None:
-        @stage(out=True)
-        def output_stream(config: Config, record: Record) -> Optional[Record]:
-            if not record.outbuf:
-                raise RuntimeError(
-                    'lolog pipeline error: '
-                    'cannot output log record that has not been formatted')
-
-            stream.write(''.join(record.outbuf))
-            return record
-
-        config.add_stage(output_stream)
+    config.configure(level=level, format=format, stream=stream)
 
     return config
 
@@ -249,6 +247,17 @@ def format_simple(config: Config, record: Record) -> Optional[Record]:
 FORMATTER = {
     "simple": format_simple,
 }
+
+
+@stage(out=True)
+def output_stream(config: Config, record: Record) -> Optional[Record]:
+    if not record.outbuf:
+        raise RuntimeError(
+            'lolog pipeline error: '
+            'cannot output log record that has not been formatted')
+
+    config.stream.write(''.join(record.outbuf))
+    return record
 
 
 # aliases for compatibility with C interface
