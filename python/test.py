@@ -2,7 +2,6 @@
 
 # informal test for the Python interface to lolog
 
-import os
 import random
 import sys
 import threading
