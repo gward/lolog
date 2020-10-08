@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import collections
 import enum
+import fnmatch
+import re
 import sys
 import threading
 import time
@@ -32,6 +34,7 @@ class Config:
     local: threading.local
     default_level: Level
     logger_level: Dict[str, Level]
+    logger_patterns: List[Tuple[re.regex, Level]]
     pipeline: List[StageType]
     logger: Dict[str, Logger]
     time: Callable[[], float]
@@ -42,6 +45,7 @@ class Config:
         self.local = threading.local()
         self.default_level = Level.NOTSET
         self.logger_level = {}
+        self.logger_patterns = []
         self.pipeline = []
         self.logger = {}
         self.time = time.time
@@ -71,7 +75,23 @@ class Config:
     def set_logger_level(self, name: str, level: Level):
         self.logger_level[name] = level
 
+    def set_logger_pattern_level(self, pattern: str, level: Level):
+        regex = re.compile(fnmatch.translate(pattern))
+        self.logger_patterns.append((regex, level))
+
     def get_logger_level(self, name: str):
+        if name in self.logger_level:
+            # this logger has been explicitly configured
+            return self.logger_level[name]
+
+        # search for a matching pattern
+        for (regex, level) in self.logger_patterns:
+            if regex.match(name):
+                return level
+        else:
+            # fallback to default
+            return self.default_level
+
         return self.logger_level.get(name, self.default_level)
 
     def add_stage(self, stage: StageType):
