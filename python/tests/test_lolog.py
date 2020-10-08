@@ -44,15 +44,28 @@ def test_simple_logging():
     cfg.configure(stream=outfile)
 
     log_foo = cfg.get_logger('foo')
+    log_bar = cfg.get_logger('bar')
 
     log_foo.debug('message 1', name='ted', age=43)
     log_foo.info('message 2', request_id='34a9')
+    log_bar.warning('something is wrong', user='joe', smell='fishy')
+    log_bar.error('request failed', url='http://localhost/', status=503)
+    log_bar.critical('world ending', recommended_action='logout')
 
     text = outfile.getvalue().splitlines()
-    assert len(text) == 2
+    assert len(text) == 5
     assert text[0] == (
         'time=2020-01-14T13:14:43.000000 name=foo level=DEBUG '
         'message=message 1 name=ted age=43')
     assert text[1] == (
         'time=2020-01-14T13:14:43.400000 name=foo level=INFO '
         'message=message 2 request_id=34a9')
+    assert text[2] == (
+        'time=2020-01-14T13:14:43.800000 name=bar level=WARNING '
+        'message=something is wrong user=joe smell=fishy')
+    assert text[3] == (
+        'time=2020-01-14T13:14:44.200000 name=bar level=ERROR '
+        'message=request failed url=http://localhost/ status=503')
+    assert text[4] == (
+        'time=2020-01-14T13:14:44.600000 name=bar level=CRITICAL '
+        'message=world ending recommended_action=logout')

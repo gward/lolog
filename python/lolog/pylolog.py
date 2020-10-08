@@ -161,6 +161,15 @@ class Logger:
     def info(self, message: str, **kwargs):
         self._log(Level.INFO, message, kwargs.items())
 
+    def warning(self, message: str, **kwargs):
+        self._log(Level.WARNING, message, kwargs.items())
+
+    def error(self, message: str, **kwargs):
+        self._log(Level.ERROR, message, kwargs.items())
+
+    def critical(self, message: str, **kwargs):
+        self._log(Level.CRITICAL, message, kwargs.items())
+
     def _log(self, level: Level, message: str, items: List[Tuple[str, Any]]):
         config = self.config
 
