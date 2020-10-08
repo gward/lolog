@@ -15,19 +15,33 @@ but you are free to create more if you like.
 (This might be useful in test code.)
 Most other lolog objects reference a ``Config`` object.
 
-You can get and configure a ``Config`` object in one shot::
+You can configure logging and get a ``Config`` object in one shot::
 
-    cfg = lolog.init(level=lolog.WARNING, stream=sys.stderr)
+    cfg = lolog.init()
 
-But you are only allowed to do this once per process.
-(Library code should *never* call ``init()``!
-That is reserved for application startup.)
+This creates and returns
+the global default ``Config`` object.
+When called with no arguments,
+``init()`` configures reasonable defaults
+for logging in development:
+
+  * emit all log messages (default level is ``DEBUG``)
+  * write log messages to stderr
+  * format in simple human-readable plain text: ``key=val ...``
+
+You can override each of these
+with optional keyword arguments:
+see the API reference for details.
+
+You are only allowed to call ``init()`` once per process.
+(Library code MUST NOT call ``init()`` —
+it is reserved for application startup code.)
 See below for other ways to get a ``Config`` object.
 
 All configuration information lives in the config object:
 
-  * The log level for each logger (if configured).
   * The default log level, used by loggers with no explicit log level.
+  * The log level for each logger (if configured).
   * The pipeline, a list of functions that operate on log records.
 
 The default pipeline created by ``init()`` looks like:
@@ -175,7 +189,7 @@ The logging pipeline
 
 Every ``Config`` object has exactly one pipeline,
 which is a sequence of pipeline *stages*.
-Each stage is a callable with signature:
+Each stage is a callable with signature::
 
     stage(config: Config, record: Record) -> Optional[Record]
 
@@ -195,7 +209,7 @@ Each pipeline stage must additionally have a couple of attributes:
   * ``fmt``: bool, does the stage format the log record?
   * ``out``: bool, does the stage output the log record?
 
-There are various ways to implement this interface,
+There are various ways to satisfy these requirements,
 but the easiest is to use
 lolog's ``stage()`` decorator.
 
@@ -217,7 +231,7 @@ that contain the string `"foobar"`::
             return None
         return record
 
-``stage()`` simply sets all the required attributes,
+``stage()`` sets all the required attributes,
 defaulting to False.
 
 Mutating stage
