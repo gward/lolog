@@ -119,10 +119,10 @@ class Logger:
         self.context.append((key, value))
 
     def debug(self, message: str, **kwargs):
-        self._log(Level.DEBUG, message, **kwargs)
+        self._log(Level.DEBUG, message, kwargs.items())
 
     def info(self, message: str, **kwargs):
-        self._log(Level.INFO, message, **kwargs)
+        self._log(Level.INFO, message, kwargs.items())
 
     def _log(self, level: Level, message: str, items: List[Tuple[str, Any]]):
         config = self.config
