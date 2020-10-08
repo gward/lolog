@@ -2,4 +2,4 @@
 
 set -e
 
-pyflakes .
+flake8 .

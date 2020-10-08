@@ -11,5 +11,3 @@ def make_config(default_level: int):
 
 def make_logger(name: str):
     return lolog.lol_make_logger(name.encode("ascii"))
-
-
