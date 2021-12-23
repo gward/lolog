@@ -69,3 +69,48 @@ def test_simple_logging():
     assert text[4] == (
         'time=2020-01-14T13:14:44.600000 name=bar level=CRITICAL '
         'message=world ending recommended_action=logout')
+
+
+@freezegun.freeze_time('2020-01-14T13:14:43', auto_tick_seconds=0.4)
+def test_fancy_logging():
+    outfile = io.StringIO()
+    cfg = lolog.make_config()
+    cfg.configure(stream=outfile)
+
+    # silence the library (be more strict with lib.guts.deep)
+    cfg.set_logger_level('lib.guts', lolog.INFO)
+    cfg.set_logger_level('lib.guts.deep', lolog.SILENT)
+
+    applog = cfg.get_logger('myapp')
+    liblog = cfg.get_logger('lib.guts')
+
+    assert cfg.get_logger('myapp') is applog
+    assert cfg.get_logger('lib.guts') is liblog
+
+    liblog.debug('this is a really chatty library', arg1='bla', arg2='hi')
+    applog.debug('hello from the app')
+
+    liblog.info('stupid library blathering away',
+                a='meep', b='beep', c='ping')
+    applog.add_context('request_id', '244a')
+    applog.info('useful info from the app')
+
+    subliblog = lolog.get_logger('lib.guts.deep')
+    assert subliblog is not liblog
+    subliblog.debug('this sublib is also noisy', arg='!!!')
+    subliblog.error('even its error messages are too noisy')
+
+    text = outfile.getvalue().splitlines()
+    assert len(text) == 3
+
+    # clock starts at .400 because of a filtered log call
+    assert text[0] == (
+        'time=2020-01-14T13:14:43.400000 name=myapp level=DEBUG '
+        'message=hello from the app')
+    assert text[1] == (
+        'time=2020-01-14T13:14:43.800000 name=lib.guts level=INFO '
+        'message=stupid library blathering away '
+        'a=meep b=beep c=ping')
+    assert text[2] == (
+        'time=2020-01-14T13:14:44.200000 name=myapp level=INFO '
+        'message=useful info from the app request_id=244a')

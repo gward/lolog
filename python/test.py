@@ -19,28 +19,6 @@ def main():
     mt_test()
 
 
-def simple_test():
-    print("** START simple_test() **")
-    applog = lolog.get_logger("myapp")
-    liblog = lolog.get_logger("lib.guts")
-    print(f"applog = {applog!r}, liblog = {liblog!r}")
-
-    liblog.debug("this is a really chatty library", arg1="bla", arg2="hi")
-    applog.debug("hello from the app")
-    print(f"applog = {applog!r}, liblog = {liblog!r}")
-
-    liblog.info("stupid library blathering away",
-                a="meeeeeeep", b="deeeeeeeep", c="piiiiiiing")
-    applog.add_context("request_id", "244a")
-    applog.info("useful info from the app")
-
-    assert lolog.get_logger("myapp") is applog
-
-    subliblog = lolog.get_logger("lib.guts.deep")
-    subliblog.debug("this sublib is also noisy", arg="!!!")
-    print("** END simple_test() **")
-
-
 def mt_test():
     print("** START mt_test() **")
 
@@ -49,10 +27,11 @@ def mt_test():
 
     def worker(name):
         count = random.randint(10, 20)
-        log.add_local_context("tid", threading.current_thread().ident)
+        tid = threading.current_thread().ident
+        log.add_local_context("tid1", tid)
         log.add_local_context("count", count)
         for idx in range(1, count + 1):
-            log.info("doing some work", iter=idx)
+            log.info("doing some work", iter=idx, tid2=tid)
 
     log.info("starting multithreaded test", num_threads=num_threads)
     threads = []
