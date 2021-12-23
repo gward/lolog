@@ -1,6 +1,18 @@
 #!venv/bin/python
 
-# informal test for the Python interface to lolog
+# informal test of a multithreaded app using lolog
+#
+# expectations:
+#
+# * every line will include the thread ID twice, as tid1=T and tid2=T --
+#   the two values will always be the same
+#
+# * for each thread (i.e. each distinct value of tid), the value of count
+#   will always be the same -- we will not accidentally log thread A's
+#   count in thread B
+#
+# * for each thread, iter will always increment from 1 to count, and then
+#   the thread will stop
 
 import random
 import sys
@@ -10,17 +22,7 @@ import lolog
 
 
 def main():
-    config = lolog.init(
-        level=lolog.DEBUG,
-        stream=sys.stdout)
-    config.set_logger_level("lib.guts", lolog.Level.INFO)
-
-    simple_test()
-    mt_test()
-
-
-def mt_test():
-    print("** START mt_test() **")
+    lolog.init(stream=sys.stdout)
 
     num_threads = 10
     log = lolog.get_logger("myapp.mt")
@@ -43,8 +45,6 @@ def mt_test():
 
     for thread in threads:
         thread.join()
-
-    print("** END mt_test() **")
 
 
 if __name__ == "__main__":
