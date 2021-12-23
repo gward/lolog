@@ -94,3 +94,6 @@ Or maybe you want to mutate messages: every INFO message from noisylib that cont
 
 All of these are outside the scope of a README file. See the main documentation for details.
 
+## Contributing to lolog
+
+See [HACKING.md](HACKING.md).
