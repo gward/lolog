@@ -6,5 +6,6 @@ src/gen/
 *.o
 __pycache__
 .mypy_cache
+*.egg-info/
 venv
 doc/_build
