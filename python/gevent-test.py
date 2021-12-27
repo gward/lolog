@@ -6,11 +6,9 @@ import random
 import sys
 
 import gevent
-import gevent.monkey
 
 import lolog
 
-gevent.monkey.patch_thread()
 log = lolog.get_logger('gevent-test')
 
 

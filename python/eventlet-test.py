@@ -6,15 +6,9 @@ import random
 import sys
 
 import eventlet
-import eventlet.green.threading
 
 import lolog
 import lolog.pylolog
-
-# similar to eventlet.monkey_patch, but laser focused on pylolog -- but it
-# would probably be even better if pylolog used eventlet.corolocal.local
-# directly
-lolog.pylolog.threading = eventlet.green.threading
 
 log = lolog.get_logger('eventlet-test')
 
