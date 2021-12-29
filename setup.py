@@ -3,6 +3,7 @@ from setuptools import setup
 dev_requires = [
     "flake8 >= 4.0.0",
     "pytest >= 6.0.0",
+    "pytest-cov >= 3.0.0",
     "freezegun >= 1.0.0",
 ]
 
