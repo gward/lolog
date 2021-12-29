@@ -12,7 +12,9 @@ setup(
     version="0.0.1",
     author="Greg Ward",
     author_email="greg@gerg.ca",
-    summary="low-overhead structured logging library",
+    description='low-overhead structured logging library',
+    packages=['lolog'],
+    package_dir={'lolog': 'python/lolog'},
     install_requires=[],
     extras_require={
         "dev": dev_requires,
