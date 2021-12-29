@@ -6,6 +6,7 @@ import collections
 import contextvars
 import enum
 import fnmatch
+import json
 import re
 import sys
 import threading
@@ -67,6 +68,8 @@ class Config:
         if level is not None:
             self.add_stage(filter_level)
         if format is not None:
+            if format not in FORMATTER:
+                raise ValueError('unsupported format: {!r}'.format(format))
             self.add_stage(FORMATTER[format])
         if stream is not None:
             self.stream = stream
@@ -262,8 +265,36 @@ def format_simple(config: Config, record: Record) -> Optional[Record]:
     return record
 
 
+class JSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        try:
+            iterable = iter(obj)
+        except TypeError:
+            return str(obj)
+        else:
+            return list(iterable)
+
+
+_json_encoder = JSONEncoder()
+
+
+@stage(fmt=True)
+def format_json(config: Config, record: Record) -> Optional[Record]:
+    items = [
+        ('time', isotime(record.time)),
+        ('name', record.name),
+        ('level', record.level.name),
+        ('message', record.message),
+    ] + record.context
+    data = {key: value() if callable(value) else value
+            for (key, value) in items}
+    record.outbuf.append(_json_encoder.encode(data) + '\n')
+    return record
+
+
 FORMATTER = {
-    "simple": format_simple,
+    'simple': format_simple,
+    'json': format_json,
 }
 
 

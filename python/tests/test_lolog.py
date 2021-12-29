@@ -1,4 +1,5 @@
 import io
+import json
 
 import freezegun
 import pytest
@@ -114,3 +115,55 @@ def test_fancy_logging():
     assert text[2] == (
         'time=2020-01-14T13:14:44.200000 name=myapp level=INFO '
         'message=useful info from the app request_id=244a')
+
+
+class Dummy:
+    def __str__(self):
+        return 'dummy object'
+
+
+def test_format_json():
+    config = lolog.make_config()
+    ts = 1581411252.431693
+
+    # first time with empty context -- no extra fields
+    context = []
+    rec = pylolog.Record(
+        ts, 'foo', lolog.DEBUG, 'hello "world"', context, outbuf=[])
+
+    outrec = pylolog.format_json(config, rec)
+    assert outrec is rec
+    assert json.loads(''.join(outrec.outbuf)) == {
+        'time': '2020-02-11T08:54:12.431693',
+        'name': 'foo',
+        'level': 'DEBUG',
+        'message': 'hello "world"',
+    }
+
+    def gen():
+        yield 3
+        yield 'b'
+
+    # now with some more interesting stuff in context
+    context = [
+        ('c1', 'simple string'),
+        ('c2', '←‽→'),
+        ('c3', {'foo': 42}),
+        ('c4', gen()),
+        ('c5', Dummy()),
+    ]
+    rec = pylolog.Record(
+        ts, 'merp.bla', lolog.ERROR, 'hello "world"', context, outbuf=[])
+
+    outrec = pylolog.format_json(config, rec)
+    assert json.loads(''.join(outrec.outbuf)) == {
+        'time': '2020-02-11T08:54:12.431693',
+        'name': 'merp.bla',
+        'level': 'ERROR',
+        'message': 'hello "world"',
+        'c1': 'simple string',
+        'c2': '←‽→',
+        'c3': {'foo': 42},
+        'c4': [3, 'b'],
+        'c5': 'dummy object',
+    }
