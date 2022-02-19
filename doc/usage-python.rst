@@ -46,7 +46,7 @@ All configuration information lives in the config object:
 
 The default pipeline created by ``init()`` looks like:
 
-       level filter  →  formatter  →  stream output
+       formatter  →  stream output
 
 Pipelines will be described in more detail below.
 
@@ -89,9 +89,9 @@ has no affect on any other logger,
 not even ``foo.bar``.
 
 If you want to affect the behaviour of many loggers,
-use wildcards::
+use a pattern::
 
-    cfg.set_logger_level('foo.*', lolog.INFO)
+    cfg.set_logger_pattern_level('foo.*', lolog.INFO)
 
 Levels and level filtering
 ++++++++++++++++++++++++++
@@ -100,10 +100,9 @@ Log level describes the importance of a log message.
 This lets you filter out less important messages
 and focus on the important stuff,
 at least in your production environment.
-In development, you probably want to see everything.
-Or at least everything from your own code.
-Together with lolog's “level filter” pipeline stage,
-log levels enable all of this.
+In development, you probably want to see everything
+(or at least everything from your own code).
+lolog's levels enable all of this.
 
 Log levels are defined by the ``Level`` enum.
 The sequence of log levels,
@@ -155,13 +154,6 @@ but these will be suppressed::
     lolog.get_logger("bar").info("dropped")
     lolog.get_logger("qux").debug("dropped")
     lolog.get_logger("noo").critical("nuclear launch detected")
-
-Filtering by level is not technically
-a core feature of lolog.
-Since it's provided by a pipeline stage,
-you can replace it with your own logic.
-But it's so important that it's documented
-here with the core features.
 
 Record
 ++++++
@@ -218,35 +210,35 @@ Filtering stage
 
 For example, here is a custom filtering stage
 that drops INFO-level messages
-from "noisylib"
-that contain the string `"foobar"`::
+from noisylib
+that contain the string ``"foobar"``::
 
-    from lolog import stage, Config, Record
+    import lolog
 
-    @stage()
-    def filter(config: Config, record: Record) -> Optional[Record]:
+    @lolog.stage()
+    def filter(config: lolog.Config, record: lolog.Record) -> Optional[lolog.Record]:
         if (record.name == "noisylib"
               and record.level == lolog.INFO
               and "foobar" in record.message):
             return None
         return record
 
-``stage()`` sets all the required attributes,
+The ``@stage()`` decorator sets all required attributes, 
 defaulting to False.
 
 Mutating stage
 ++++++++++++++
 
-Here's another solution to the "noisylib" problem,
-mutating its log records to a lower log level
-so they can be subject to normal filtering policy::
+Imagine instead that you don't want to drop those ``"foobar"`` messages from noisylib,
+just censor out the dangerous word ``"foobar"``.
+You can do that with a mutating pipeline stage::
 
-    @stage(mut=True)
-    def mutate(config: Config, record: Record) -> Optional[Record]:
+    @lolog.stage(mut=True)
+    def mutate(config: lolog.Config, record: lolog.Record) -> Optional[lolog.Record]:
         if (record.name == "noisylib"
               and record.level == lolog.INFO
               and "foobar" in record.message):
-            record.level = lolog.DEBUG
+            record.message = record.message.replace("foobar", "******")
         return record
 
 Be careful not to fall off the end
