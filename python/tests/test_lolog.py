@@ -16,11 +16,10 @@ def test_init_defaults():
 
     # and sets up sensible defaults
     assert cfg.default_level == lolog.DEBUG
-    assert cfg.pipeline[0] is pylolog.filter_level
-    assert cfg.pipeline[1] is pylolog.format_simple
-    assert cfg.pipeline[1].fmt
-    assert cfg.pipeline[2] is pylolog.output_stream
-    assert cfg.pipeline[2].out
+    assert cfg.pipeline[0] is pylolog.format_simple
+    assert cfg.pipeline[0].fmt
+    assert cfg.pipeline[1] is pylolog.output_stream
+    assert cfg.pipeline[1].out
 
     # second call is rejected
     with pytest.raises(RuntimeError) as ctx:
@@ -87,6 +86,7 @@ def test_fancy_logging():
 
     assert cfg.get_logger('myapp') is applog
     assert cfg.get_logger('lib.guts') is liblog
+    assert cfg.get_logger_level('myapp') == lolog.DEBUG
 
     liblog.debug('this is a really chatty library', arg1='bla', arg2='hi')
     applog.debug('hello from the app')
@@ -104,16 +104,15 @@ def test_fancy_logging():
     text = outfile.getvalue().splitlines()
     assert len(text) == 3
 
-    # clock starts at .400 because of a filtered log call
     assert text[0] == (
-        'time=2020-01-14T13:14:43.400000 name=myapp level=DEBUG '
+        'time=2020-01-14T13:14:43.000000 name=myapp level=DEBUG '
         'message=hello from the app')
     assert text[1] == (
-        'time=2020-01-14T13:14:43.800000 name=lib.guts level=INFO '
+        'time=2020-01-14T13:14:43.400000 name=lib.guts level=INFO '
         'message=stupid library blathering away '
         'a=meep b=beep c=ping')
     assert text[2] == (
-        'time=2020-01-14T13:14:44.200000 name=myapp level=INFO '
+        'time=2020-01-14T13:14:43.800000 name=myapp level=INFO '
         'message=useful info from the app request_id=244a')
 
 

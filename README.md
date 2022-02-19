@@ -34,9 +34,8 @@ The output of this program will be something like
   * Log format: in real life, you will most likely want `format="json"`.
   * Output file: you can send your log messages anywhere you like, as long as it's a writeable file-like object. Anything fancier than that will require work by you.
 
-Behind the scenes, lolog uses a pipeline to process log messages. In this case, `init()` creates a three-stage pipeline:
+Behind the scenes, lolog uses a pipeline to process log messages. In this case, `init()` creates a two-stage pipeline:
 
-  * A _level filter_ to drop log messages whose level is lower than INFO. (You can also filter per-logger, but that requires a bit more code than simply calling `init()`.)
   * A _formatter_ to combine all the inputs into a single string: in this case, it's the human-friendly (but not machine-friendly!) `time=... name=...`.
   * An _output stage_ to write that string to a file.
 
