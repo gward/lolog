@@ -1,5 +1,6 @@
 import io
 import json
+from typing import Any, List, Tuple
 
 import freezegun
 import pytest
@@ -18,9 +19,9 @@ def test_init_defaults():
     assert cfg.default_level == lolog.DEBUG
     assert cfg.pipeline[0] is pylolog.filter_level
     assert cfg.pipeline[1] is pylolog.format_simple
-    assert cfg.pipeline[1].fmt
+    assert cfg.pipeline[1].fmt  # type: ignore
     assert cfg.pipeline[2] is pylolog.output_stream
-    assert cfg.pipeline[2].out
+    assert cfg.pipeline[2].out  # type: ignore
 
     # second call is rejected
     with pytest.raises(RuntimeError) as ctx:
@@ -127,7 +128,7 @@ def test_format_json():
     ts = 1581411252.431693
 
     # first time with empty log map -- no extra fields
-    logmap = []
+    logmap: List[Tuple[str, Any]] = []
     rec = pylolog.Record(
         ts, 'foo', lolog.DEBUG, 'hello "world"', logmap, outbuf=[])
 

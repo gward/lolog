@@ -39,7 +39,7 @@ class Config:
     _instance: ClassVar[Optional[Config]] = None
 
     mutex: threading.Lock
-    log_map: List[Tuple[str, str]]
+    log_map: List[Tuple[str, Any]]
     default_level: Level
     logger_level: Dict[str, Level]
     logger_patterns: List[Tuple[re.Pattern, Level]]
@@ -90,10 +90,10 @@ class Config:
             _local_log_map.set(local)
         local.append((key, value))
 
-    def get_log_map(self) -> List[Tuple[str, str]]:
+    def get_log_map(self) -> List[Tuple[str, Any]]:
         return self.log_map
 
-    def get_local_log_map(self) -> List[Tuple[str, str]]:
+    def get_local_log_map(self) -> List[Tuple[str, Any]]:
         try:
             return _local_log_map.get()
         except LookupError:
@@ -150,7 +150,7 @@ class Logger:
     def __init__(self, config: Config, name: str):
         self.config = config
         self.name = name
-        self.log_map: List[Tuple[str, str]] = []
+        self.log_map: List[Tuple[str, Any]] = []
 
     def __str__(self):
         return '{}'.format(self.name)
