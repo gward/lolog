@@ -181,7 +181,7 @@ Every log record has the following attributes:
   * ``name``: str, name of the logger that created this record
   * ``level``: Level, determined by the logger method called
   * ``message``: str, the fixed string passed as the first argument
-  * ``context``: list of key-value pairs
+  * ``log_map``: list of key-value pairs
   * ``outbuf``: used for interaction between format and output stages
 
 The logging pipeline

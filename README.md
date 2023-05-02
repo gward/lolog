@@ -25,7 +25,7 @@ Basic usage in Python is
 
     def main():
         lolog.init(level=lolog.INFO, format="simple", stream=sys.stdout)
-        log.add_context("pid", os.getpid())
+        log.add_value("pid", os.getpid())
         log.info("starting up", prog=sys.argv[0])
         log.debug("detailed debug info", foo=42, thing="blah")
 
@@ -93,17 +93,21 @@ That's easy:
 If you have invented a brilliant new markup language that is destined to replace JSON,
 you'll have to write your own formatter.
 
-## Context
+## Log map
 
-The key to structured logging is that list of key-value pairs included with every log message.
-But what's lurking unseen is the log _context_,
-which is just a bunch of additional key-value pairs that are automatically added to the log message.
+The key to structured logging is the sequence of
+key-value pairs included with every log message: the _log map_.
+But there's more to the log map than the values passed to `log.info()`.
+There are additional levels of log map lurking beneath the surface,
+adding additional key-value pairs to every log message.
 
-In fact, lolog has several levels of context: global, thread-local, and logger.
-Global context lives in the `Config` object, and that's where you put things like the process ID.
-Thread-local context also lives in the `Config` object, but is used for values that vary by thread:
+lolog has several levels of log map: global, thread-local, per-logger, and per-message.
+Global log map values lives in the `Config` object, and that's where you put things like the process ID.
+Thread-local log map values also live in the `Config` object, for values that vary by thread:
 current request ID, current username, current client IP address, etc.
-Finally, logger context exists in each logger object. Its use is limited only by your imagination.
+Per-logger values exist in each logger object,
+and per-message values are passed to log methods like `log.info()`.
+Their use is limited only by your imagination.
 
 ## Output
 

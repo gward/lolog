@@ -30,7 +30,7 @@ StageType = Callable[["Config", "Record"], Optional["Record"]]
 # list of (key, value) tuples -- but a different list per thread/task/
 # greenlet/whatever concurrency abstraction is at play, as long as it works
 # with contextvars!
-_local_context = contextvars.ContextVar('local_context')
+_local_log_map = contextvars.ContextVar('local_log_map')
 
 
 class Config:
@@ -38,7 +38,7 @@ class Config:
     _instance: ClassVar[Optional[Config]] = None
 
     mutex: threading.Lock
-    context: List[Tuple[str, str]]
+    log_map: List[Tuple[str, str]]
     default_level: Level
     logger_level: Dict[str, Level]
     logger_patterns: List[Tuple[re.regex, Level]]
@@ -49,7 +49,7 @@ class Config:
 
     def __init__(self):
         self.mutex = threading.Lock()
-        self.context = []
+        self.log_map = []
         self.default_level = Level.NOTSET
         self.logger_level = {}
         self.logger_patterns = []
@@ -78,28 +78,28 @@ class Config:
     def set_default_level(self, level: Level):
         self.default_level = level
 
-    def add_context(self, key, value):
-        self.context.append((key, value))
+    def add_value(self, key, value):
+        self.log_map.append((key, value))
 
-    def add_local_context(self, key, value):
+    def add_local_value(self, key, value):
         try:
-            local = _local_context.get()
+            local = _local_log_map.get()
         except LookupError:
             local = []
-            _local_context.set(local)
+            _local_log_map.set(local)
         local.append((key, value))
 
-    def get_context(self) -> List[Tuple[str, str]]:
-        return self.context
+    def get_log_map(self) -> List[Tuple[str, str]]:
+        return self.log_map
 
-    def get_local_context(self) -> List[Tuple[str, str]]:
+    def get_local_log_map(self) -> List[Tuple[str, str]]:
         try:
-            return _local_context.get()
+            return _local_log_map.get()
         except LookupError:
             return []
 
-    def clear_local_context(self):
-        _local_context.set([])
+    def clear_local_log_map(self):
+        _local_log_map.set([])
 
     def set_logger_level(self, name: str, level: Level):
         self.logger_level[name] = level
@@ -142,14 +142,14 @@ class Config:
 
 
 Record = collections.namedtuple(
-    'Record', ['time', 'name', 'level', 'message', 'context', 'outbuf'])
+    'Record', ['time', 'name', 'level', 'message', 'log_map', 'outbuf'])
 
 
 class Logger:
     def __init__(self, config: Config, name: str):
         self.config = config
         self.name = name
-        self.context: List[Tuple[str, str]] = []
+        self.log_map: List[Tuple[str, str]] = []
 
     def __str__(self):
         return '{}'.format(self.name)
@@ -158,14 +158,14 @@ class Logger:
         return '<{} at 0x{:x}: {}>'.format(
             self.__class__.__name__, id(self), self)
 
-    def add_global_context(self, key: str, value):
-        self.config.add_context(key, value)
+    def add_global_value(self, key: str, value):
+        self.config.add_value(key, value)
 
-    def add_local_context(self, key: str, value):
-        self.config.add_local_context(key, value)
+    def add_local_value(self, key: str, value):
+        self.config.add_local_value(key, value)
 
-    def add_context(self, key, value):
-        self.context.append((key, value))
+    def add_value(self, key, value):
+        self.log_map.append((key, value))
 
     def debug(self, message: str, **kwargs):
         self._log(Level.DEBUG, message, kwargs.items())
@@ -185,10 +185,10 @@ class Logger:
     def _log(self, level: Level, message: str, items: List[Tuple[str, Any]]):
         config = self.config
 
-        context = [
-            *config.get_context(),
-            *config.get_local_context(),
-            *self.context,
+        log_map = [
+            *config.get_log_map(),
+            *config.get_local_log_map(),
+            *self.log_map,
             *items,
         ]
         record = Record(
@@ -196,7 +196,7 @@ class Logger:
             name=self.name,
             level=level,
             message=message,
-            context=context,
+            log_map=log_map,
             outbuf=[])
 
         for stage in config.pipeline:
@@ -258,7 +258,7 @@ def format_simple(config: Config, record: Record) -> Optional[Record]:
         ('name', record.name),
         ('level', record.level.name),
         ('message', record.message),
-    ] + record.context
+    ] + record.log_map
     data = ['{}={}'.format(key, value() if callable(value) else value)
             for (key, value) in items]
     record.outbuf.append(' '.join(data) + '\n')
@@ -285,7 +285,7 @@ def format_json(config: Config, record: Record) -> Optional[Record]:
         ('name', record.name),
         ('level', record.level.name),
         ('message', record.message),
-    ] + record.context
+    ] + record.log_map
     data = {key: value() if callable(value) else value
             for (key, value) in items}
     record.outbuf.append(_json_encoder.encode(data) + '\n')
