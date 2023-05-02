@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from typing import Callable
+
+make_config: Callable
+make_logger: Callable
 
 try:
     raise ImportError("C version disabled for now")

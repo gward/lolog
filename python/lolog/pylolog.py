@@ -11,7 +11,7 @@ import re
 import sys
 import threading
 import time
-from typing import ClassVar, Optional, Any, Callable, Dict, List, Tuple, TextIO
+from typing import ClassVar, Optional, Any, Callable, Iterable, Dict, List, Tuple, TextIO
 
 
 class Level(enum.IntEnum):
@@ -30,6 +30,7 @@ StageType = Callable[["Config", "Record"], Optional["Record"]]
 # list of (key, value) tuples -- but a different list per thread/task/
 # greenlet/whatever concurrency abstraction is at play, as long as it works
 # with contextvars!
+_local_log_map: contextvars.ContextVar[List[Tuple[str, Any]]]
 _local_log_map = contextvars.ContextVar('local_log_map')
 
 
@@ -41,7 +42,7 @@ class Config:
     log_map: List[Tuple[str, str]]
     default_level: Level
     logger_level: Dict[str, Level]
-    logger_patterns: List[Tuple[re.regex, Level]]
+    logger_patterns: List[Tuple[re.Pattern, Level]]
     stream: Optional[TextIO]
     pipeline: List[StageType]
     logger: Dict[str, Logger]
@@ -125,9 +126,9 @@ class Config:
 
     def add_stage(self, stage: StageType):
         try:
-            stage.mut
-            stage.fmt
-            stage.out
+            stage.mut           # type: ignore
+            stage.fmt           # type: ignore
+            stage.out           # type: ignore
         except AttributeError:
             raise TypeError(
                 'pipeline stage must provide attrs mut, fmt, and out')
@@ -182,7 +183,7 @@ class Logger:
     def critical(self, message: str, **kwargs):
         self._log(Level.CRITICAL, message, kwargs.items())
 
-    def _log(self, level: Level, message: str, items: List[Tuple[str, Any]]):
+    def _log(self, level: Level, message: str, items: Iterable[Tuple[str, Any]]):
         config = self.config
 
         log_map = [
@@ -191,6 +192,7 @@ class Logger:
             *self.log_map,
             *items,
         ]
+        record: Optional[Record]
         record = Record(
             time=config.time(),
             name=self.name,
@@ -304,6 +306,10 @@ def output_stream(config: Config, record: Record) -> Optional[Record]:
         raise RuntimeError(
             'lolog pipeline error: '
             'cannot output log record that has not been formatted')
+    if config.stream is None:
+        raise RuntimeError(
+            'lolog pipeline error: '
+            'cannot output log record when config.stream is not set')
 
     config.stream.write(''.join(record.outbuf))
     return record

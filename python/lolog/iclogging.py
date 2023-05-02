@@ -1,7 +1,7 @@
 """intercept calls to the standard logging module"""
 
 import logging
-from typing import Type
+from typing import Any, Dict, Type
 
 from .pylolog import Config, Level
 
@@ -10,7 +10,7 @@ class Interceptor:
     def __init__(self, cfg: Config, logger_cls: Type):
         self.cfg = cfg
         self.logger_cls = logger_cls
-        self.save = {}
+        self.save: Dict[str, Any] = {}
 
     def intercept(self):
         for level in [
