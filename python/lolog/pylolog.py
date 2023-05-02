@@ -62,7 +62,8 @@ class Config:
     def configure(
             self, level: Level = Level.DEBUG,
             format: str = "simple",
-            stream: TextIO = sys.stderr):
+            stream: TextIO = sys.stderr,
+    ) -> None:
         self.default_level = level
 
         # setup the pipeline
@@ -76,13 +77,13 @@ class Config:
             self.stream = stream
             self.add_stage(output_stream)
 
-    def set_default_level(self, level: Level):
+    def set_default_level(self, level: Level) -> None:
         self.default_level = level
 
-    def add_value(self, key, value):
+    def add_value(self, key: str, value: Any) -> None:
         self.log_map.append((key, value))
 
-    def add_local_value(self, key, value):
+    def add_local_value(self, key: str, value: Any) -> None:
         try:
             local = _local_log_map.get()
         except LookupError:
@@ -99,17 +100,17 @@ class Config:
         except LookupError:
             return []
 
-    def clear_local_log_map(self):
+    def clear_local_log_map(self) -> None:
         _local_log_map.set([])
 
-    def set_logger_level(self, name: str, level: Level):
+    def set_logger_level(self, name: str, level: Level) -> None:
         self.logger_level[name] = level
 
-    def set_logger_pattern_level(self, pattern: str, level: Level):
+    def set_logger_pattern_level(self, pattern: str, level: Level) -> None:
         regex = re.compile(fnmatch.translate(pattern))
         self.logger_patterns.append((regex, level))
 
-    def get_logger_level(self, name: str):
+    def get_logger_level(self, name: str) -> Level:
         if name in self.logger_level:
             # this logger has been explicitly configured
             return self.logger_level[name]
@@ -124,7 +125,7 @@ class Config:
 
         return self.logger_level.get(name, self.default_level)
 
-    def add_stage(self, stage: StageType):
+    def add_stage(self, stage: StageType) -> None:
         try:
             stage.mut           # type: ignore
             stage.fmt           # type: ignore
@@ -159,31 +160,31 @@ class Logger:
         return '<{} at 0x{:x}: {}>'.format(
             self.__class__.__name__, id(self), self)
 
-    def add_global_value(self, key: str, value):
+    def add_global_value(self, key: str, value: Any) -> None:
         self.config.add_value(key, value)
 
-    def add_local_value(self, key: str, value):
+    def add_local_value(self, key: str, value: Any) -> None:
         self.config.add_local_value(key, value)
 
-    def add_value(self, key, value):
+    def add_value(self, key: str, value: Any) -> None:
         self.log_map.append((key, value))
 
-    def debug(self, message: str, **kwargs):
+    def debug(self, message: str, **kwargs: Any) -> None:
         self._log(Level.DEBUG, message, kwargs.items())
 
-    def info(self, message: str, **kwargs):
+    def info(self, message: str, **kwargs: Any) -> None:
         self._log(Level.INFO, message, kwargs.items())
 
-    def warning(self, message: str, **kwargs):
+    def warning(self, message: str, **kwargs: Any) -> None:
         self._log(Level.WARNING, message, kwargs.items())
 
-    def error(self, message: str, **kwargs):
+    def error(self, message: str, **kwargs: Any) -> None:
         self._log(Level.ERROR, message, kwargs.items())
 
-    def critical(self, message: str, **kwargs):
+    def critical(self, message: str, **kwargs: Any) -> None:
         self._log(Level.CRITICAL, message, kwargs.items())
 
-    def _log(self, level: Level, message: str, items: Iterable[Tuple[str, Any]]):
+    def _log(self, level: Level, message: str, items: Iterable[Tuple[str, Any]]) -> None:
         config = self.config
 
         log_map = [
