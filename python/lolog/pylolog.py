@@ -11,7 +11,7 @@ import re
 import sys
 import threading
 import time
-from typing import ClassVar, Optional, Any, Callable, Dict, List, Tuple, TextIO
+from typing import ClassVar, Optional, Any, Callable, Iterable, Dict, List, Tuple, TextIO
 
 
 class Level(enum.IntEnum):
@@ -30,7 +30,8 @@ StageType = Callable[["Config", "Record"], Optional["Record"]]
 # list of (key, value) tuples -- but a different list per thread/task/
 # greenlet/whatever concurrency abstraction is at play, as long as it works
 # with contextvars!
-_local_context = contextvars.ContextVar('local_context')
+_local_log_map: contextvars.ContextVar[List[Tuple[str, Any]]]
+_local_log_map = contextvars.ContextVar('local_log_map')
 
 
 class Config:
@@ -38,10 +39,10 @@ class Config:
     _instance: ClassVar[Optional[Config]] = None
 
     mutex: threading.Lock
-    context: List[Tuple[str, str]]
+    log_map: List[Tuple[str, Any]]
     default_level: Level
     logger_level: Dict[str, Level]
-    logger_patterns: List[Tuple[re.regex, Level]]
+    logger_patterns: List[Tuple[re.Pattern, Level]]
     stream: Optional[TextIO]
     pipeline: List[StageType]
     logger: Dict[str, Logger]
@@ -49,7 +50,7 @@ class Config:
 
     def __init__(self):
         self.mutex = threading.Lock()
-        self.context = []
+        self.log_map = []
         self.default_level = Level.NOTSET
         self.logger_level = {}
         self.logger_patterns = []
@@ -61,7 +62,8 @@ class Config:
     def configure(
             self, level: Level = Level.DEBUG,
             format: str = "simple",
-            stream: TextIO = sys.stderr):
+            stream: TextIO = sys.stderr,
+    ) -> None:
         self.default_level = level
 
         # setup the pipeline
@@ -75,40 +77,40 @@ class Config:
             self.stream = stream
             self.add_stage(output_stream)
 
-    def set_default_level(self, level: Level):
+    def set_default_level(self, level: Level) -> None:
         self.default_level = level
 
-    def add_context(self, key, value):
-        self.context.append((key, value))
+    def add_value(self, key: str, value: Any) -> None:
+        self.log_map.append((key, value))
 
-    def add_local_context(self, key, value):
+    def add_local_value(self, key: str, value: Any) -> None:
         try:
-            local = _local_context.get()
+            local = _local_log_map.get()
         except LookupError:
             local = []
-            _local_context.set(local)
+            _local_log_map.set(local)
         local.append((key, value))
 
-    def get_context(self) -> List[Tuple[str, str]]:
-        return self.context
+    def get_log_map(self) -> List[Tuple[str, Any]]:
+        return self.log_map
 
-    def get_local_context(self) -> List[Tuple[str, str]]:
+    def get_local_log_map(self) -> List[Tuple[str, Any]]:
         try:
-            return _local_context.get()
+            return _local_log_map.get()
         except LookupError:
             return []
 
-    def clear_local_context(self):
-        _local_context.set([])
+    def clear_local_log_map(self) -> None:
+        _local_log_map.set([])
 
-    def set_logger_level(self, name: str, level: Level):
+    def set_logger_level(self, name: str, level: Level) -> None:
         self.logger_level[name] = level
 
-    def set_logger_pattern_level(self, pattern: str, level: Level):
+    def set_logger_pattern_level(self, pattern: str, level: Level) -> None:
         regex = re.compile(fnmatch.translate(pattern))
         self.logger_patterns.append((regex, level))
 
-    def get_logger_level(self, name: str):
+    def get_logger_level(self, name: str) -> Level:
         if name in self.logger_level:
             # this logger has been explicitly configured
             return self.logger_level[name]
@@ -123,11 +125,11 @@ class Config:
 
         return self.logger_level.get(name, self.default_level)
 
-    def add_stage(self, stage: StageType):
+    def add_stage(self, stage: StageType) -> None:
         try:
-            stage.mut
-            stage.fmt
-            stage.out
+            stage.mut           # type: ignore
+            stage.fmt           # type: ignore
+            stage.out           # type: ignore
         except AttributeError:
             raise TypeError(
                 'pipeline stage must provide attrs mut, fmt, and out')
@@ -142,14 +144,14 @@ class Config:
 
 
 Record = collections.namedtuple(
-    'Record', ['time', 'name', 'level', 'message', 'context', 'outbuf'])
+    'Record', ['time', 'name', 'level', 'message', 'log_map', 'outbuf'])
 
 
 class Logger:
     def __init__(self, config: Config, name: str):
         self.config = config
         self.name = name
-        self.context: List[Tuple[str, str]] = []
+        self.log_map: List[Tuple[str, Any]] = []
 
     def __str__(self):
         return '{}'.format(self.name)
@@ -158,45 +160,46 @@ class Logger:
         return '<{} at 0x{:x}: {}>'.format(
             self.__class__.__name__, id(self), self)
 
-    def add_global_context(self, key: str, value):
-        self.config.add_context(key, value)
+    def add_global_value(self, key: str, value: Any) -> None:
+        self.config.add_value(key, value)
 
-    def add_local_context(self, key: str, value):
-        self.config.add_local_context(key, value)
+    def add_local_value(self, key: str, value: Any) -> None:
+        self.config.add_local_value(key, value)
 
-    def add_context(self, key, value):
-        self.context.append((key, value))
+    def add_value(self, key: str, value: Any) -> None:
+        self.log_map.append((key, value))
 
-    def debug(self, message: str, **kwargs):
+    def debug(self, message: str, **kwargs: Any) -> None:
         self._log(Level.DEBUG, message, kwargs.items())
 
-    def info(self, message: str, **kwargs):
+    def info(self, message: str, **kwargs: Any) -> None:
         self._log(Level.INFO, message, kwargs.items())
 
-    def warning(self, message: str, **kwargs):
+    def warning(self, message: str, **kwargs: Any) -> None:
         self._log(Level.WARNING, message, kwargs.items())
 
-    def error(self, message: str, **kwargs):
+    def error(self, message: str, **kwargs: Any) -> None:
         self._log(Level.ERROR, message, kwargs.items())
 
-    def critical(self, message: str, **kwargs):
+    def critical(self, message: str, **kwargs: Any) -> None:
         self._log(Level.CRITICAL, message, kwargs.items())
 
-    def _log(self, level: Level, message: str, items: List[Tuple[str, Any]]):
+    def _log(self, level: Level, message: str, items: Iterable[Tuple[str, Any]]) -> None:
         config = self.config
 
-        context = [
-            *config.get_context(),
-            *config.get_local_context(),
-            *self.context,
+        log_map = [
+            *config.get_log_map(),
+            *config.get_local_log_map(),
+            *self.log_map,
             *items,
         ]
+        record: Optional[Record]
         record = Record(
             time=config.time(),
             name=self.name,
             level=level,
             message=message,
-            context=context,
+            log_map=log_map,
             outbuf=[])
 
         for stage in config.pipeline:
@@ -258,7 +261,7 @@ def format_simple(config: Config, record: Record) -> Optional[Record]:
         ('name', record.name),
         ('level', record.level.name),
         ('message', record.message),
-    ] + record.context
+    ] + record.log_map
     data = ['{}={}'.format(key, value() if callable(value) else value)
             for (key, value) in items]
     record.outbuf.append(' '.join(data) + '\n')
@@ -285,7 +288,7 @@ def format_json(config: Config, record: Record) -> Optional[Record]:
         ('name', record.name),
         ('level', record.level.name),
         ('message', record.message),
-    ] + record.context
+    ] + record.log_map
     data = {key: value() if callable(value) else value
             for (key, value) in items}
     record.outbuf.append(_json_encoder.encode(data) + '\n')
@@ -304,6 +307,10 @@ def output_stream(config: Config, record: Record) -> Optional[Record]:
         raise RuntimeError(
             'lolog pipeline error: '
             'cannot output log record that has not been formatted')
+    if config.stream is None:
+        raise RuntimeError(
+            'lolog pipeline error: '
+            'cannot output log record when config.stream is not set')
 
     config.stream.write(''.join(record.outbuf))
     return record

@@ -1,5 +1,6 @@
 import io
 import json
+from typing import Any, List, Tuple
 
 import freezegun
 import pytest
@@ -18,9 +19,9 @@ def test_init_defaults():
     assert cfg.default_level == lolog.DEBUG
     assert cfg.pipeline[0] is pylolog.filter_level
     assert cfg.pipeline[1] is pylolog.format_simple
-    assert cfg.pipeline[1].fmt
+    assert cfg.pipeline[1].fmt  # type: ignore
     assert cfg.pipeline[2] is pylolog.output_stream
-    assert cfg.pipeline[2].out
+    assert cfg.pipeline[2].out  # type: ignore
 
     # second call is rejected
     with pytest.raises(RuntimeError) as ctx:
@@ -93,7 +94,7 @@ def test_fancy_logging():
 
     liblog.info('stupid library blathering away',
                 a='meep', b='beep', c='ping')
-    applog.add_context('request_id', '244a')
+    applog.add_value('request_id', '244a')
     applog.info('useful info from the app')
 
     subliblog = lolog.get_logger('lib.guts.deep')
@@ -126,10 +127,10 @@ def test_format_json():
     config = lolog.make_config()
     ts = 1581411252.431693
 
-    # first time with empty context -- no extra fields
-    context = []
+    # first time with empty log map -- no extra fields
+    logmap: List[Tuple[str, Any]] = []
     rec = pylolog.Record(
-        ts, 'foo', lolog.DEBUG, 'hello "world"', context, outbuf=[])
+        ts, 'foo', lolog.DEBUG, 'hello "world"', logmap, outbuf=[])
 
     outrec = pylolog.format_json(config, rec)
     assert outrec is rec
@@ -144,8 +145,8 @@ def test_format_json():
         yield 3
         yield 'b'
 
-    # now with some more interesting stuff in context
-    context = [
+    # now with some more interesting stuff in logmap
+    logmap = [
         ('c1', 'simple string'),
         ('c2', '←‽→'),
         ('c3', {'foo': 42}),
@@ -153,7 +154,7 @@ def test_format_json():
         ('c5', Dummy()),
     ]
     rec = pylolog.Record(
-        ts, 'merp.bla', lolog.ERROR, 'hello "world"', context, outbuf=[])
+        ts, 'merp.bla', lolog.ERROR, 'hello "world"', logmap, outbuf=[])
 
     outrec = pylolog.format_json(config, rec)
     assert json.loads(''.join(outrec.outbuf)) == {
