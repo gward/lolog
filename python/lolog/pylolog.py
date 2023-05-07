@@ -125,14 +125,6 @@ class Config:
         return self.logger_level.get(name, self.default_level)
 
     def add_stage(self, stage: StageType) -> None:
-        try:
-            stage.mut           # type: ignore
-            stage.fmt           # type: ignore
-            stage.out           # type: ignore
-        except AttributeError:
-            raise TypeError(
-                'pipeline stage must provide attrs mut, fmt, and out')
-
         self.pipeline.append(stage)
 
     def get_logger(self, name: str) -> Logger:
@@ -238,17 +230,6 @@ def get_logger(name):
     return get_config().get_logger(name)
 
 
-def stage(mut=False, fmt=False, out=False):
-    def wrap(func):
-        func.mut = mut
-        func.fmt = fmt
-        func.out = out
-        return func
-
-    return wrap
-
-
-@stage(fmt=True)
 def format_simple(config: Config, record: Record) -> Optional[Record]:
     items = [
         ('time', isotime(record.time)),
@@ -275,7 +256,6 @@ class JSONEncoder(json.JSONEncoder):
 _json_encoder = JSONEncoder()
 
 
-@stage(fmt=True)
 def format_json(config: Config, record: Record) -> Optional[Record]:
     items = [
         ('time', isotime(record.time)),
@@ -295,7 +275,6 @@ FORMATTER = {
 }
 
 
-@stage(out=True)
 def output_stream(config: Config, record: Record) -> Optional[Record]:
     if not record.outbuf:
         raise RuntimeError(

@@ -18,9 +18,7 @@ def test_init_defaults():
     # and sets up sensible defaults
     assert cfg.default_level == lolog.DEBUG
     assert cfg.pipeline[0] is pylolog.format_simple
-    assert cfg.pipeline[0].fmt  # type: ignore
     assert cfg.pipeline[1] is pylolog.output_stream
-    assert cfg.pipeline[1].out  # type: ignore
 
     # second call is rejected
     with pytest.raises(RuntimeError) as ctx:
@@ -156,6 +154,7 @@ def test_format_json():
         ts, 'merp.bla', lolog.ERROR, 'hello "world"', logmap, outbuf=[])
 
     outrec = pylolog.format_json(config, rec)
+    assert outrec is not None
     assert json.loads(''.join(outrec.outbuf)) == {
         'time': '2020-02-11T08:54:12.431693',
         'name': 'merp.bla',

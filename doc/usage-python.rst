@@ -195,16 +195,6 @@ To drop this log record, return None.
 Otherwise, return the log record
 (possibly modified).
 
-Each pipeline stage must additionally have a couple of attributes:
-
-  * ``mut``: bool, does the stage mutate the log record?
-  * ``fmt``: bool, does the stage format the log record?
-  * ``out``: bool, does the stage output the log record?
-
-There are various ways to satisfy these requirements,
-but the easiest is to use
-lolog's ``stage()`` decorator.
-
 Filtering stage
 +++++++++++++++
 
@@ -215,16 +205,12 @@ that contain the string ``"foobar"``::
 
     import lolog
 
-    @lolog.stage()
     def filter(config: lolog.Config, record: lolog.Record) -> Optional[lolog.Record]:
         if (record.name == "noisylib"
               and record.level == lolog.INFO
               and "foobar" in record.message):
             return None
         return record
-
-The ``@stage()`` decorator sets all required attributes, 
-defaulting to False.
 
 Mutating stage
 ++++++++++++++
