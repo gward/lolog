@@ -20,7 +20,7 @@ def main():
     logging.getLogger("foo").debug("debug message to foo")
     logging.getLogger("foo.bar").info("info message with arg %s", "meep")
     logging.getLogger("foo.baz").debug("debug with arg %s and kwargs %(bar)s",
-                                       "blip", bar=42)  # type: ignore # kwarg
+                                       "blip", bar=42)
 
     icept.undo()
 
