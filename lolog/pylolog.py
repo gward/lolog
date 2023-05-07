@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import collections
 import contextvars
 import enum
 import fnmatch
@@ -11,6 +10,7 @@ import re
 import sys
 import threading
 import time
+import typing as ty
 from typing import ClassVar, Optional, Any, Callable, Iterable, Dict, List, Tuple, TextIO
 
 
@@ -134,8 +134,13 @@ class Config:
             return self.logger[name]
 
 
-Record = collections.namedtuple(
-    'Record', ['time', 'name', 'level', 'message', 'log_map', 'outbuf'])
+class Record(ty.NamedTuple):
+    time: float
+    name: str
+    level: Level
+    message: str
+    log_map: List[Tuple[str, Any]]
+    outbuf: List[str]
 
 
 class Logger:
