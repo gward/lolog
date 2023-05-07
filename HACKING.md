@@ -14,4 +14,4 @@ Then install development dependencies:
 
 That done, you can run the unit tests with
 
-    ./python/test.sh
+    ./python/test-python.sh

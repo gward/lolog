@@ -15,7 +15,6 @@ setup(
     author_email="greg@gerg.ca",
     description='low-overhead structured logging library',
     packages=['lolog'],
-    package_dir={'lolog': 'python/lolog'},
     install_requires=[],
     extras_require={
         "dev": dev_requires,
