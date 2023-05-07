@@ -7,10 +7,12 @@ The goals of the project are:
     each log message is a fixed string accompanied by a bunch of key/value pairs.
     This makes large-scale log analysis easier.
   * Keep it simple and debuggable:
-    I never want to spend another hour of my life trying to figure out why some expected log output is not seen,
+    nobody should have to debug their logging library to figure out why
+    some expected log output is not seen,
     or why it's being duplicated, or formatted weirdly.
   * Minimize overhead:
-    I don't want you to worry about the runtime cost of keeping a `log.debug(...)` call in your code.
+    nobody should have to worry about the runtime cost of keeping
+    a `log.debug(...)` call in their code.
     The impact of filtering it out in production should be very low.
   * Be flexible in the ways that you need, without unnecessary complexity.
 
@@ -40,25 +42,24 @@ The output of this program will be something like
   * Global log level.
     In this case, all messages at level DEBUG (which is lower than INFO) are filtered out.
   * Log format: in real life, you will most likely want `format="json"`.
-  * Output file: you can send your log messages anywhere you like,
-    as long as it's a writeable file-like object.
-    Anything fancier than that will require work by you.
+  * Output file: you can send your log messages to any writeable file-like object.
+    Anything fancier than that will require work by you (a custom output stage).
 
 Behind the scenes, lolog uses a pipeline to process log messages.
-In this case, `init()` creates a three-stage pipeline:
+In this case, `init()` creates a two-stage pipeline:
 
-  * A _level filter_ to drop log messages whose level is lower than INFO.
-    (You can also filter per-logger, but that requires a bit more code than simply calling `init()`.)
   * A _formatter_ to combine all the inputs into a single string:
+    in this case, it's the human-friendly (but not machine-friendly!)
+    `time=... name=...`.
     in this case, it's the human-friendly (but not machine-friendly!) `time=... name=...`.
   * An _output stage_ to write that string to a file.
 
 ## Filtering by log level
 
 Filtering on a global log level is usually too coarse.
-In real life, maybe you want to keep INFO and up by default,
+In real life, you might want to keep INFO and up by default,
 DEBUG and up for your own code,
-but only WARNING and up for a library that annoys you by logging too much information at level INFO.
+but only WARNING and up for a noisy library that logs too much information at level INFO.
 Not a problem:
 
     lolog.init(level=lolog.INFO, format="simple", stream=sys.stdout)
@@ -72,7 +73,8 @@ With this setup, if your code looks like
     log.info("something interesting")
     log.debug("not as interesting")
 
-then both of those messages will be emitted. But if noisylib does this:
+then both of those messages will be emitted.
+But if noisylib does this:
 
     log = lolog.get_logger("noisylib")
 
@@ -102,37 +104,44 @@ There are additional levels of log map lurking beneath the surface,
 adding additional key-value pairs to every log message.
 
 lolog has several levels of log map: global, thread-local, per-logger, and per-message.
-Global log map values lives in the `Config` object, and that's where you put things like the process ID.
-Thread-local log map values also live in the `Config` object, for values that vary by thread:
+
+Global log map values lives in the `Config` object,
+and that's where you put things like the process ID.
+
+Thread-local log map values also live in the `Config` object,
+for values that vary by thread (or coroutine or greenthread):
 current request ID, current username, current client IP address, etc.
+
 Per-logger values exist in each logger object,
 and per-message values are passed to log methods like `log.info()`.
 Their use is limited only by your imagination.
 
 ## Output
 
-lolog's builtin facilities output are its least flexible feature.
+lolog's builtin facilities output are its least flexible feature—deliberately!
 In Python, you can write logs to any writeable file-like object: period.
 In C, you can write logs to any stdio stream: period.
 
-If your runtime environment requires that applications themselves write to log files,
-or rotate log files, or send log events to syslog or off-host:
-2003 called, it wants its logging policy back.
-You really need to reconsider your logging env.
-In the meantime, you'll have to write your own output stage.
+If your runtime environment requires that applications themselves
+rotate log files, or send log events to syslog, to a database, or off-host:
+you really need to reconsider your logging environment.
+Modern applications should rely on external log management tools.
+If that's not an option for you, you'll have to write your own output stage.
 
 ## Fancy stuff
 
 lolog's pipeline is a very general mechanism.
-As mentioned above, you can write custom formatters or output stages to handle cases that lolog doesn't handle.
+As mentioned above, you can write custom formatters or output stages
+to handle cases that lolog doesn't handle.
 
-But say you want to drop DEBUG messages from noisylib on Tuesdays,
-unless they contain the string "foobar", you can do that.
+You can also write a filter stage.
+Say you want to drop DEBUG messages from noisylib on Tuesdays,
+unless they contain the string `"foobar"`.
 You just have to write a custom filter stage and insert it into the pipeline.
 
 Or maybe you want to mutate messages:
-every INFO message from noisylib that contains the string "foobar"
-should be downgraded to DEBUG, and then subject to usual filtering policy.
+every INFO message from noisylib that contains the string `"foobar"` should be downgraded to DEBUG,
+and then subject to usual filtering policy.
 Again: write a custom stage and insert it into the pipeline.
 
 All of these are outside the scope of a README file.

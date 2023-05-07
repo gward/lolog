@@ -60,15 +60,14 @@ class Config:
         self.time = time.time
 
     def configure(
-            self, level: Level = Level.DEBUG,
+            self,
+            level: Level = Level.DEBUG,
             format: str = "simple",
             stream: TextIO = sys.stderr,
     ) -> None:
         self.default_level = level
 
         # setup the pipeline
-        if level is not None:
-            self.add_stage(filter_level)
         if format is not None:
             if format not in FORMATTER:
                 raise ValueError('unsupported format: {!r}'.format(format))
@@ -187,6 +186,9 @@ class Logger:
     def _log(self, level: Level, message: str, items: Iterable[Tuple[str, Any]]) -> None:
         config = self.config
 
+        if level < config.get_logger_level(self.name):
+            return
+
         log_map = [
             *config.get_log_map(),
             *config.get_local_log_map(),
@@ -244,14 +246,6 @@ def stage(mut=False, fmt=False, out=False):
         return func
 
     return wrap
-
-
-@stage()
-def filter_level(config: Config, record: Record) -> Optional[Record]:
-    """filter log records based on level"""
-    if config.get_logger_level(record.name) <= record.level:
-        return record
-    return None
 
 
 @stage(fmt=True)
