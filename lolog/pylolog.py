@@ -25,12 +25,13 @@ class Level(enum.IntEnum):
 
 
 StageType = Callable[["Config", "Record"], Optional["Record"]]
+LogMap = List[Tuple[str, Any]]
 
 
 # list of (key, value) tuples -- but a different list per thread/task/
 # greenlet/whatever concurrency abstraction is at play, as long as it works
 # with contextvars!
-_local_log_map: contextvars.ContextVar[List[Tuple[str, Any]]]
+_local_log_map: contextvars.ContextVar[LogMap]
 _local_log_map = contextvars.ContextVar('local_log_map')
 
 
@@ -39,7 +40,7 @@ class Config:
     _instance: ClassVar[Optional[Config]] = None
 
     mutex: threading.Lock
-    log_map: List[Tuple[str, Any]]
+    log_map: LogMap
     default_level: Level
     logger_level: Dict[str, Level]
     logger_patterns: List[Tuple[re.Pattern, Level]]
@@ -90,10 +91,10 @@ class Config:
             _local_log_map.set(local)
         local.append((key, value))
 
-    def get_log_map(self) -> List[Tuple[str, Any]]:
+    def get_log_map(self) -> LogMap:
         return self.log_map
 
-    def get_local_log_map(self) -> List[Tuple[str, Any]]:
+    def get_local_log_map(self) -> LogMap:
         try:
             return _local_log_map.get()
         except LookupError:
@@ -139,7 +140,7 @@ class Record(ty.NamedTuple):
     name: str
     level: Level
     message: str
-    log_map: List[Tuple[str, Any]]
+    log_map: LogMap
     outbuf: List[str]
 
 
@@ -147,7 +148,7 @@ class Logger:
     def __init__(self, config: Config, name: str):
         self.config = config
         self.name = name
-        self.log_map: List[Tuple[str, Any]] = []
+        self.log_map: LogMap = []
 
     def __str__(self):
         return '{}'.format(self.name)
