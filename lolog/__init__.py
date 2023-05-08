@@ -15,6 +15,8 @@ except (ImportError, OSError) as err:
     print(err)
     print("fallback to Python implementation")
     from .pylolog import (
+        Config,
+        Record,
         Level,
         init,
         make_config,
@@ -32,6 +34,8 @@ CRITICAL = Level.CRITICAL
 SILENT = Level.SILENT
 
 __all__ = [
+    'Config',
+    'Record',
     'Level',
     'init',
     'make_config',

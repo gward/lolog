@@ -63,16 +63,21 @@ class Config:
     def configure(
             self,
             level: Level = Level.DEBUG,
-            format: str = "simple",
+            format: ty.Union[str, StageType] = "simple",
             stream: TextIO = sys.stderr,
     ) -> None:
         self.default_level = level
 
         # setup the pipeline
-        if format is not None:
+        if isinstance(format, str):
             if format not in FORMATTER:
                 raise ValueError('unsupported format: {!r}'.format(format))
             self.add_stage(FORMATTER[format])
+        elif callable(format):
+            self.add_stage(format)
+        elif format is not None:
+            raise TypeError('unsupported format: must be str or callable')
+
         if stream is not None:
             self.stream = stream
             self.add_stage(output_stream)
@@ -227,7 +232,7 @@ def isotime(now):
 
 
 def init(level: Level = Level.DEBUG,
-         format: str = "simple",
+         format: ty.Union[str, StageType] = "simple",
          stream: TextIO = sys.stderr) -> Config:
     config = get_config()
     if config.pipeline:
