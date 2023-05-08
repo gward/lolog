@@ -51,7 +51,6 @@ In this case, `init()` creates a two-stage pipeline:
   * A _formatter_ to combine all the inputs into a single string:
     in this case, it's the human-friendly (but not machine-friendly!)
     `time=... name=...`.
-    in this case, it's the human-friendly (but not machine-friendly!) `time=... name=...`.
   * An _output stage_ to write that string to a file.
 
 ## Filtering by log level
