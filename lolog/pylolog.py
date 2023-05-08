@@ -143,6 +143,19 @@ class Record(ty.NamedTuple):
     log_map: LogMap
     outbuf: List[str]
 
+    def get_items(self) -> LogMap:
+        items = [
+            ('time', isotime(self.time)),
+            ('name', self.name),
+            ('level', self.level.name),
+            ('message', self.message),
+        ]
+        for (key, value) in self.log_map:
+            if callable(value):
+                value = value()
+            items.append((key, value))
+        return items
+
 
 class Logger:
     def __init__(self, config: Config, name: str):
@@ -237,14 +250,8 @@ def get_logger(name):
 
 
 def format_simple(config: Config, record: Record) -> Optional[Record]:
-    items = [
-        ('time', isotime(record.time)),
-        ('name', record.name),
-        ('level', record.level.name),
-        ('message', record.message),
-    ] + record.log_map
-    data = ['{}={}'.format(key, value() if callable(value) else value)
-            for (key, value) in items]
+    items = record.get_items()
+    data = ['{}={}'.format(key, value) for (key, value) in items]
     record.outbuf.append(' '.join(data) + '\n')
     return record
 
@@ -263,14 +270,8 @@ _json_encoder = JSONEncoder()
 
 
 def format_json(config: Config, record: Record) -> Optional[Record]:
-    items = [
-        ('time', isotime(record.time)),
-        ('name', record.name),
-        ('level', record.level.name),
-        ('message', record.message),
-    ] + record.log_map
-    data = {key: value() if callable(value) else value
-            for (key, value) in items}
+    items = record.get_items()
+    data = dict(items)
     record.outbuf.append(_json_encoder.encode(data) + '\n')
     return record
 
