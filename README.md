@@ -35,7 +35,7 @@ Basic usage in Python is
 
 The output of this program will be something like
 
-    time=2020-09-27T11:53:50.552246 name=main level=INFO message=starting up pid=6954 prog=readme-test.py
+    2020-09-27T11:53:50.552246 starting up name=main level=INFO pid=6954 prog=readme-test.py
 
 `lolog.init()` only lets you tweak three settings:
 
@@ -50,7 +50,7 @@ In this case, `init()` creates a two-stage pipeline:
 
   * A _formatter_ to combine all the inputs into a single string:
     in this case, it's the human-friendly (but not machine-friendly!)
-    `time=... name=...`.
+    `<timestamp> <message> name=... level=... pid=...`
   * An _output stage_ to write that string to a file.
 
 ## Filtering by log level
