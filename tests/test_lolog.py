@@ -54,20 +54,20 @@ def test_simple_logging():
     text = outfile.getvalue().splitlines()
     assert len(text) == 5
     assert text[0] == (
-        'time=2020-01-14T13:14:43.000000 name=foo level=DEBUG '
-        'message=message 1 name=ted age=43')
+        '2020-01-14T13:14:43.000000 message 1 '
+        'name=foo level=DEBUG name=ted age=43')
     assert text[1] == (
-        'time=2020-01-14T13:14:43.400000 name=foo level=INFO '
-        'message=message 2 request_id=34a9')
+        '2020-01-14T13:14:43.400000 message 2 '
+        'name=foo level=INFO request_id=34a9')
     assert text[2] == (
-        'time=2020-01-14T13:14:43.800000 name=bar level=WARNING '
-        'message=something is wrong user=joe smell=fishy')
+        '2020-01-14T13:14:43.800000 something is wrong '
+        'name=bar level=WARNING user=joe smell=fishy')
     assert text[3] == (
-        'time=2020-01-14T13:14:44.200000 name=bar level=ERROR '
-        'message=request failed url=http://localhost/ status=503')
+        '2020-01-14T13:14:44.200000 request failed '
+        'name=bar level=ERROR url=http://localhost/ status=503')
     assert text[4] == (
-        'time=2020-01-14T13:14:44.600000 name=bar level=CRITICAL '
-        'message=world ending recommended_action=logout')
+        '2020-01-14T13:14:44.600000 world ending '
+        'name=bar level=CRITICAL recommended_action=logout')
 
 
 @freezegun.freeze_time('2020-01-14T13:14:43', auto_tick_seconds=0.4)
@@ -104,15 +104,14 @@ def test_fancy_logging():
     assert len(text) == 3
 
     assert text[0] == (
-        'time=2020-01-14T13:14:43.000000 name=myapp level=DEBUG '
-        'message=hello from the app')
+        '2020-01-14T13:14:43.000000 hello from the app '
+        'name=myapp level=DEBUG')
     assert text[1] == (
-        'time=2020-01-14T13:14:43.400000 name=lib.guts level=INFO '
-        'message=stupid library blathering away '
-        'a=meep b=beep c=ping')
+        '2020-01-14T13:14:43.400000 stupid library blathering away '
+        'name=lib.guts level=INFO a=meep b=beep c=ping')
     assert text[2] == (
-        'time=2020-01-14T13:14:43.800000 name=myapp level=INFO '
-        'message=useful info from the app request_id=244a')
+        '2020-01-14T13:14:43.800000 useful info from the app '
+        'name=myapp level=INFO request_id=244a')
 
 
 class Dummy:

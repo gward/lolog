@@ -139,6 +139,10 @@ class Config:
                 self.logger[name] = Logger(self, name)
             return self.logger[name]
 
+    def format_time(self, time_: float) -> str:
+        return (time.strftime('%FT%T', time.localtime(time_)) +
+                '{:06f}'.format(time_ % 1)[1:])
+
 
 class Record(ty.NamedTuple):
     time: float
@@ -150,10 +154,8 @@ class Record(ty.NamedTuple):
 
     def get_items(self) -> LogMap:
         items = [
-            ('time', isotime(self.time)),
             ('name', self.name),
             ('level', self.level.name),
-            ('message', self.message),
         ]
         for (key, value) in self.log_map:
             if callable(value):
@@ -226,11 +228,6 @@ class Logger:
                 break
 
 
-def isotime(now):
-    return (time.strftime('%FT%T', time.localtime(now)) +
-            '{:06f}'.format(now % 1)[1:])
-
-
 def init(level: Level = Level.DEBUG,
          format: ty.Union[str, StageType] = "simple",
          stream: TextIO = sys.stderr) -> Config:
@@ -255,9 +252,11 @@ def get_logger(name):
 
 
 def format_simple(config: Config, record: Record) -> Optional[Record]:
-    items = record.get_items()
-    data = ['{}={}'.format(key, value) for (key, value) in items]
-    record.outbuf.append(' '.join(data) + '\n')
+    append = record.outbuf.append
+    append('{} {}'.format(config.format_time(record.time), record.message))
+    for (key, value) in record.get_items():
+        append(' {}={}'.format(key, value))
+    append('\n')
     return record
 
 
@@ -276,7 +275,11 @@ _json_encoder = JSONEncoder()
 
 def format_json(config: Config, record: Record) -> Optional[Record]:
     items = record.get_items()
-    data = dict(items)
+    data = {
+        'time': config.format_time(record.time),
+        'message': record.message,
+    }
+    data.update(items)
     record.outbuf.append(_json_encoder.encode(data) + '\n')
     return record
 
