@@ -144,7 +144,7 @@ and then subject to usual filtering policy.
 Again: write a custom stage and insert it into the pipeline.
 
 All of these are outside the scope of a README file.
-See the main documentation for details.
+See [the main documentation](https://lolog.readthedocs.io/en/latest/) for details.
 
 ## Contributing to lolog
 
