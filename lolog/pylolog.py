@@ -130,6 +130,9 @@ class Config:
 
         return self.logger_level.get(name, self.default_level)
 
+    def insert_stage(self, before_idx: int, stage: StageType) -> None:
+        self.pipeline.insert(before_idx, stage)
+
     def add_stage(self, stage: StageType) -> None:
         self.pipeline.append(stage)
 
@@ -162,6 +165,9 @@ class Record(ty.NamedTuple):
                 value = value()
             items.append((key, value))
         return items
+
+    def replace(self, **kwargs: Any) -> Record:
+        return self._replace(**kwargs)
 
 
 class Logger:

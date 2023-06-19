@@ -165,3 +165,38 @@ def test_format_json():
         'c4': [3, 'b'],
         'c5': 'dummy object',
     }
+
+
+@freezegun.freeze_time('2020-01-14T16:00:00', auto_tick_seconds=0.1)
+def test_replace():
+    outfile = io.StringIO()
+    cfg = lolog.make_config()
+    cfg.configure(stream=outfile)
+    ts = 1581411252.431693
+
+    rec1 = pylolog.Record(
+        ts, 'beep.bop', lolog.INFO, 'test msg', [], outbuf=[])
+    rec2 = rec1.replace()
+    assert rec1 == rec2
+
+    rec3 = rec1.replace(level=lolog.DEBUG, message='ding')
+    assert rec3 != rec1
+    assert rec3.level is lolog.DEBUG
+    assert rec3.message == 'ding'
+
+    def replace_stage(config, record):
+        if record.name == 'foo':
+            record = record.replace(message='HELLO ' + record.message)
+        return record
+
+    cfg.insert_stage(0, replace_stage)
+
+    log_foo = cfg.get_logger('foo')
+    log_bar = cfg.get_logger('bar')
+
+    log_foo.info('test 1')
+    log_bar.debug('test 2')
+
+    lines = outfile.getvalue().splitlines()
+    assert lines[0] == '2020-01-14T16:00:00.000000 HELLO test 1 name=foo level=INFO'
+    assert lines[1] == '2020-01-14T16:00:00.100000 test 2 name=bar level=DEBUG'
