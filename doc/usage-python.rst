@@ -212,22 +212,24 @@ that contain the string ``"foobar"``::
             return None
         return record
 
-Mutating stage
-++++++++++++++
+Replacing log records
++++++++++++++++++++++
+
+lolog's ``Record`` type is immutable, so you can't modify log records.
+But you can replace them with new ones!
 
 Imagine instead that you don't want to drop those ``"foobar"`` messages from noisylib,
 just censor out the dangerous word ``"foobar"``.
-You can do that with a mutating pipeline stage::
+You can do that with a pipeline stage like this::
 
-    @lolog.stage(mut=True)
-    def mutate(config: lolog.Config, record: lolog.Record) -> Optional[lolog.Record]:
+    def replace_foobar(config: lolog.Config, record: lolog.Record) -> Optional[lolog.Record]:
         if (record.name == "noisylib"
               and record.level == lolog.INFO
               and "foobar" in record.message):
-            record.message = record.message.replace("foobar", "******")
+            message = record.message.replace("foobar", "******")
+            record = record.replace(message=message)
         return record
 
 Be careful not to fall off the end
 of a stage function and implicitly return None!
-That will drop the log message,
-probably not your intention.
+That will drop the log message, probably not your intention.

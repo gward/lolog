@@ -138,7 +138,7 @@ Say you want to drop DEBUG messages from noisylib on Tuesdays,
 unless they contain the string `"foobar"`.
 You just have to write a custom filter stage and insert it into the pipeline.
 
-Or maybe you want to mutate messages:
+Or maybe you want to replace messages:
 every INFO message from noisylib that contains the string `"foobar"` should be downgraded to DEBUG,
 and then subject to usual filtering policy.
 Again: write a custom stage and insert it into the pipeline.
